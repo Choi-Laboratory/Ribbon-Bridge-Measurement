@@ -37,5 +37,5 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
-add_executable(${PROJECT_NAME}_node src/boat_measurement_node.cpp)
+add_executable(ribbon_bridge_lsd_node src/ribbon_bridge_lsd.cpp)
 target_link_libraries(${PROJECT_NAME}_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})

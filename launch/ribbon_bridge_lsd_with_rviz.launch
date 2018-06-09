@@ -1,0 +1,8 @@
+<launch>
+
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find Ribbon-Bridge-Measurement)/launch/rviz_config.rviz" />
+
+    <include file="$(find Ribbon-Bridge-Measurement)/launch/ribbon_bridge_lsd.launch"/>
+
+</launch>

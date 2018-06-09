@@ -1,8 +1,0 @@
-<launch>
-
-
-    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find boat_measurement)/launch/boat_measurement.rviz" />
-
-    <include file="$(find boat_measurement)/launch/boat_measurement.launch"/>
-
-</launch>
