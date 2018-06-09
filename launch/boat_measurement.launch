@@ -1,0 +1,9 @@
+<!--RoboCup 2017 Object Detect-->
+<launch>
+
+	<!-- boat_measurement -->
+	<node pkg="boat_measurement" type="boat_measurement_node" name="boat_measurement_node" output="screen">
+		<rosparam command="load" file="$(find boat_measurement)/config/paramater.yaml"/>
+	</node>
+
+</launch>

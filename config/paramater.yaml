@@ -1,0 +1,13 @@
+#Common paramater
+/boat_image_topic_name: "/usb_cam/image_raw"
+/boat_contrl_topic_name: "/boat_measurement_contrl"
+/boat_execute_default: true
+/boat_package_name: "boat_measurement"
+/boat_base_frame_name: "world"
+/boat_save_result_image: true
+/boat_show_result: true
+/boat_height: 0.103
+/boat_width: 0.178
+/boat_bbox_topic_name: "/darknet_ros/bounding_boxes"
+/yolo_detect_threshold: 0.2
+/boat_rect_margin: 5
