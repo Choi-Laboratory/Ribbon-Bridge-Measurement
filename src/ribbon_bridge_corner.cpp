@@ -92,6 +92,26 @@ public:
 		this->pub_overlay_text.publish(text);
 	}//publish_overlay_text
 
+	void save_result_img(cv::Mat image){
+		time_t now = time(NULL);
+		struct tm *pnow = localtime(&now);
+		std::stringstream file_name;
+		file_name << ros::package::getPath(this->this_node_name) << "/Result/" << pnow->tm_mon + 1 <<"_"<< pnow->tm_mday <<"_"<< pnow->tm_hour <<"_"<< pnow->tm_min <<"_"<< pnow->tm_sec <<".png";
+		cv::imwrite(file_name.str(), image);
+	}//save_result_img
+
+	void publish_result_img(cv::Mat image){
+		std_msgs::Header header; // empty header
+		header.seq = this->counter; // user defined counter
+		header.stamp = ros::Time::now();
+
+		cv_bridge::CvImage result_img;
+		sensor_msgs::Image result_msg;
+		result_img = cv_bridge::CvImage(header, sensor_msgs::image_encodings::BGR8, image);
+		result_img.toImageMsg(result_msg); // from cv_bridge to sensor_msgs::Image
+		this->pub_result.publish(result_msg);
+		this->counter++;
+	}//publish_result_img
 
     void yolobboxCallback(const darknet_ros_msgs::BoundingBoxes& msg){
 
@@ -123,27 +143,11 @@ public:
 
         ROS_INFO_STREAM("--- Detect " << boat_corner_array.size() << "Boat ---");
 
-        if(this->show_result == true){
-            cv_bridge::CvImage img_bridge;
-            sensor_msgs::Image result_img_msg;
-            std_msgs::Header header; // empty header
-            header.seq = this->counter; // user defined counter
-            header.stamp = ros::Time::now(); // time
-            img_bridge = cv_bridge::CvImage(header, sensor_msgs::image_encodings::BGR8, result_image);
-            img_bridge.toImageMsg(result_img_msg); // from cv_bridge to sensor_msgs::Image
-            pub_result.publish(result_img_msg);
-            this->counter++;
-        }//show_result
+		if(this->show_result || this->save_result){ this->make_result_image(***********); }//計測結果画像の作成
+        if(this->show_result == true){ this->publish_result_img(this->result_image); }//結果画像のpublish
+        if(this->save_result == true){ this->save_result_img(this->result_image); }//結果画像の保存
 
-        if(this->save_result == true){//Save Result Image
-            time_t now = time(NULL);
-            struct tm *pnow = localtime(&now);
-            std::stringstream file_name;
-            file_name << ros::package::getPath(this_node_name) << "/Result/" << pnow->tm_mon + 1 <<"_"<< pnow->tm_mday <<"_"<< pnow->tm_hour <<"_"<< pnow->tm_min <<"_"<< pnow->tm_sec <<".png";
-            cv::imwrite(file_name.str(), result_image);
-        }//save_result
-
-    }//rgbImageCallback
+    }//yolobboxCallback
 
 private:
 
