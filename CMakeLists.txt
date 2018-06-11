@@ -38,4 +38,4 @@ include_directories(
 )
 
 add_executable(ribbon_bridge_lsd_node src/ribbon_bridge_lsd.cpp)
-target_link_libraries(${PROJECT_NAME}_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
+target_link_libraries(ribbon_bridge_lsd_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})

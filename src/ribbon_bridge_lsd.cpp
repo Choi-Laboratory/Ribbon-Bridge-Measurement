@@ -389,7 +389,7 @@ private:
 
 int main(int argc, char** argv){
 
-    ros::init(argc, argv, "boat_measurement_node");
+    ros::init(argc, argv, "ribbon_bridge_lsd_node");
 
     Boat_Measurement bm;
     ros::spin();
