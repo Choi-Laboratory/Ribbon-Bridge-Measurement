@@ -13,11 +13,30 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   std_msgs
   sensor_msgs
+  geometry_msgs
   darknet_ros_msgs
 )
 
-catkin_package()
+add_message_files(
+    FILES
+    RibbonBridge.msg
+    RibbonBridges.msg
+)
 
+generate_messages(
+    DEPENDENCIES
+    std_msgs
+    geometry_msgs
+)
+
+catkin_package(
+    CATKIN_DEPENDS
+    roscpp
+    rospy
+    std_msgs
+    message_runtime
+    geometry_msgs
+)
 
 ######################
 #       OpenCV       #
@@ -39,3 +58,8 @@ include_directories(
 
 add_executable(ribbon_bridge_lsd_node src/ribbon_bridge_lsd.cpp)
 target_link_libraries(ribbon_bridge_lsd_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
+add_dependencies(ribbon_bridge_lsd_node ${PROJECT_NAME}_generate_messages_cpp)
+
+add_executable(ribbon_bridge_corner_node src/ribbon_bridge_corner.cpp)
+target_link_libraries(ribbon_bridge_corner_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
+add_dependencies(ribbon_bridge_corner_node ${PROJECT_NAME}_generate_messages_cpp)
