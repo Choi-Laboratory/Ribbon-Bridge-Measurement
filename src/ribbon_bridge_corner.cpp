@@ -33,24 +33,23 @@ public:
 
     Ribbon_Bridge_Measurement(){
 
-        ros::param::get("/boat_image_topic_name", image_topic_name);
-        ros::param::get("/boat_contrl_topic_name", contrl_topic_name);
-        ros::param::get("/boat_bbox_topic_name", boat_bbox_topic_name);
-        ros::param::get("/boat_execute_default", exe_flag);
-        ros::param::get("/boat_package_name", this_package_name);
-        ros::param::get("/boat_save_result_image", save_result_flag);
-        ros::param::get("/boat_show_result", show_result_flag);
-        ros::param::get("/boat_height", boat_height);
-        ros::param::get("/boat_width", boat_width);
-        ros::param::get("/yolo_detect_threshold", yolo_detect_threshold);
-        ros::param::get("/boat_rect_margin", rect_margin);
+        ros::param::get("show_result_img_flag", show_result_flag);
+        ros::param::get("execute_default_flag", execute_flag);
+        ros::param::get("pub_result_img_flag", pub_result_flag);
+        ros::param::get("save_result_img_flag", save_result_flag);
+
+        ros::param::get("sub_ctrl_topic_name", contrl_topic_name);
+        ros::param::get("sub_image_topic_name", image_topic_name);
+        ros::param::get("sub_yolo_topic_name", yolo_topic_name);
+
+        ros::param::get("this_package_name", this_package_name);
+        ros::param::get("yolo_prob_threshold", yolo_detect_threshold);
+        ros::param::get("yolo_rect_margin_px", rect_margin);
 
         this->counter = 0;
-        this->boat_aspect_ratio = (boat_width / boat_height);
-
         this->sub_camera_img = nh.subscribe(image_topic_name, 1, &Ribbon_Bridge_Measurement::rgbImageCallback, this);
         this->sub_ctrl_flag = nh.subscribe(contrl_topic_name, 1, &Ribbon_Bridge_Measurement::contrlCallback, this);
-        this->sub_yolo_bbox = nh.subscribe(boat_bbox_topic_name, 1, &Ribbon_Bridge_Measurement::yolobboxCallback, this);
+        this->sub_yolo_bbox = nh.subscribe(yolo_topic_name, 1, &Ribbon_Bridge_Measurement::yolobboxCallback, this);
         this->pub_result_img = nh.advertise<sensor_msgs::Image>("result_img", 1);
         this->pub_overlay_text = nh.advertise<jsk_rviz_plugins::OverlayText>("overlay_text", 1);
 
@@ -58,7 +57,7 @@ public:
 
 
     void contrlCallback(const std_msgs::Bool& msg){
-        this->exe_flag = msg.data;
+        this->execute_flag = msg.data;
     }//contrlCallback
 
 
@@ -136,9 +135,8 @@ public:
 		}//for
 	}//make_result_image
 
-	ribbon_bridge_measurement::RibbonBridge measure(cv::Mat& target_img, cv::Rect& bridge_rect, bool& detect_flag){
+	bool measure(cv::Mat& target_img, cv::Rect& bridge_rect, ribbon_bridge_measurement::RibbonBridge& measured_bridge){
 
-		ribbon_bridge_measurement::RibbonBridge measured_bridge;//返り値用
 		cv::Mat bridge_img(target_img, bridge_rect);//画像のトリミング
 
 		cv::Mat gray_img;
@@ -151,7 +149,7 @@ public:
 
 		std::vector<cv::Point2f> corners;
 		cv::goodFeaturesToTrack(bin_img, corners, 32, 0.01, 3, cv::Mat(), 3, true);
-		if (corners.size() < 4) { measured_bridge; }
+		if (corners.size() < 4) { return false; }
 
 		//for (int i = 0; i < corners.size(); i++) {
 			//cv::circle(image, cv::Point(corners[i].x, corners[i].y), 1, cv::Scalar(0, 255, 0), -1);
@@ -199,14 +197,13 @@ public:
 			corner_pt.y = subpix_corners[i].y + bridge_rect.y;
 			measured_bridge.corners.push_back(corner_pt);
 		}//for
-		detect_flag = true;
-		return measured_bridge;
 
+		return true;
 	}//measure
 
     void yolobboxCallback(const darknet_ros_msgs::BoundingBoxes& msg){
 
-        if(this->exe_flag == false){ return; }
+        if(this->execute_flag == false){ return; }
         if(this->color_img.empty() == true){
 			ROS_ERROR_STREAM("yolobboxCallback -> image empty");
 			return;
@@ -223,8 +220,8 @@ public:
 
             cv::Rect bridge_rect = this->make_margin_rect(msg.bounding_boxes[bbox_count]);//余白を付与したrectの作成
 
-			bool detect_flag = false;
-			ribbon_bridge_measurement::RibbonBridge bridge_data = this->measure(target_img, bridge_rect, detect_flag);
+			ribbon_bridge_measurement::RibbonBridge bridge_data;
+            bool detect_flag = this->measure(target_img, bridge_rect, bridge_data);//矩形領域から浮橋を検出
 
 			if(detect_flag == true){
 				measured_bridges.RibbonBridges.push_back(bridge_data);
@@ -253,14 +250,13 @@ private:
 
     std::string image_topic_name;
     std::string contrl_topic_name;
-    std::string boat_bbox_topic_name;
+    std::string yolo_topic_name;
     std::string this_package_name;
     int counter;
     bool save_result_flag;
     bool show_result_flag;
-    bool exe_flag;
-    double boat_height;
-    double boat_width;
+    bool pub_result_flag;
+    bool execute_flag;
     double boat_aspect_ratio;
     double yolo_detect_threshold;
     cv::Mat color_img;
