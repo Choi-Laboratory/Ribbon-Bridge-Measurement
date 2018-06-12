@@ -1,9 +1,13 @@
 <!--RoboCup 2017 Object Detect-->
 <launch>
 
-	<!-- Ribbon-Bridge-Measurement -->
-	<node pkg="ribbon_bridge_measurement" type="ribbon_bridge_lsd_node" name="ribbon_bridge_lsd_node" output="screen">
-		<rosparam command="load" file="$(find ribbon_bridge_measurement)/config/paramater.yaml"/>
-	</node>
+	<group ns = "ribbon_bridge_measurement"><!-- packageの名前にしておくこと -->
+
+		<!-- Ribbon-Bridge-Measurement -->
+		<node pkg="ribbon_bridge_measurement" type="ribbon_bridge_corner_node" name="ribbon_bridge_corner_node" output="screen">
+			<rosparam command="load" file="$(find ribbon_bridge_measurement)/config/paramater.yaml"/>
+		</node>
+
+	</group>
 
 </launch>

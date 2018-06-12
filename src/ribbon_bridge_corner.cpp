@@ -37,7 +37,7 @@ public:
         ros::param::get("/boat_contrl_topic_name", contrl_topic_name);
         ros::param::get("/boat_bbox_topic_name", boat_bbox_topic_name);
         ros::param::get("/boat_execute_default", exe_flag);
-        ros::param::get("/boat_package_name", this_node_name);
+        ros::param::get("/boat_package_name", this_package_name);
         ros::param::get("/boat_save_result_image", save_result_flag);
         ros::param::get("/boat_show_result", show_result_flag);
         ros::param::get("/boat_height", boat_height);
@@ -80,7 +80,7 @@ public:
 		time_t now = time(NULL);
 		struct tm *pnow = localtime(&now);
 		std::stringstream file_name;
-		file_name << ros::package::getPath(this->this_node_name) << "/Result/" << pnow->tm_mon + 1 <<"_"<< pnow->tm_mday <<"_"<< pnow->tm_hour <<"_"<< pnow->tm_min <<"_"<< pnow->tm_sec <<".png";
+		file_name << ros::package::getPath(this->this_package_name) << "/Result/" << pnow->tm_mon + 1 <<"_"<< pnow->tm_mday <<"_"<< pnow->tm_hour <<"_"<< pnow->tm_min <<"_"<< pnow->tm_sec <<".png";
 		cv::imwrite(file_name.str(), image);
 	}//save_result_img
 
@@ -254,7 +254,7 @@ private:
     std::string image_topic_name;
     std::string contrl_topic_name;
     std::string boat_bbox_topic_name;
-    std::string this_node_name;
+    std::string this_package_name;
     int counter;
     bool save_result_flag;
     bool show_result_flag;
@@ -275,11 +275,6 @@ private:
 int main(int argc, char** argv) {
 
     ros::init(argc, argv, "ribbon_bridge_corner_node");
-
-    std::string name = ros::this_node::getName();
-    std::string test = ros::this_node::getNamespace();
-    std::cout << "this_node_name = " << name << std::endl;
-    std::cout << "namespace = " << test << std::endl;
 
     Ribbon_Bridge_Measurement rbm;
     ros::spin();
