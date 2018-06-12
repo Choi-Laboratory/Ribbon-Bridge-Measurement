@@ -126,6 +126,29 @@ public:
 		this->counter++;
 	}//publish_result_img
 
+	void make_result_image(Ribbon-Bridge-Measurement::RibbonBridges data){
+
+		this->result_img = this->target_img.clone();//結果の描画用画像の確保
+
+		for(int i = 0; i < data.RibbonBridges.size(); i++){
+
+			cv::Point2f center = cv::Point2f(data.RibbonBridges[i].center.x, data.RibbonBridges[i].center.y);
+			cv::circle(this->result_img, center, 8, cv::Scalar(255, 0, 0));
+
+			std::vector<cv::point2f> corners;
+			for(int j = 0; j < data.RibbonBridges[i].corners.size(); j++){
+				cv::Point2f corner = cv::Point2f(data.RibbonBridges[i].corners[j].x, data.RibbonBridges[i].corners[j].y);
+				corners.push_back(corner);
+			}//for
+			cv::line(this->result_img, corners[0], corners[2], cv::Scalar(255, 0, 0), 1, CV_AA);//クロスラインの描画
+			cv::line(this->result_img, corners[1], corners[3], cv::Scalar(255, 0, 0), 1, CV_AA);
+			cv::line(this->result_img, corners[0], corners[1], cv::Scalar(0, 255, 0), 3, CV_AA);//矩形の描画
+			cv::line(this->result_img, corners[1], corners[2], cv::Scalar(0, 255, 0), 3, CV_AA);
+			cv::line(this->result_img, corners[2], corners[3], cv::Scalar(0, 255, 0), 3, CV_AA);
+			cv::line(this->result_img, corners[3], corners[0], cv::Scalar(0, 255, 0), 3, CV_AA);
+		}//for
+	}//make_result_image
+
 	Ribbon-Bridge-Measurement::RibbonBridge measure(cv::Mat& target_img, cv::Rect& bridge_rect, bool& detect_flag){
 
 		Ribbon-Bridge-Measurement::RibbonBridge measured_bridge;//返り値用
@@ -189,20 +212,7 @@ public:
 			corner_pt.y = subpix_corners[i].y + bridge_rect.y;
 			measured_bridge.corners.push_back(corner_pt);
 		}//for
-
-		//結果の描画
-		cv::Mat result_img = bridge_img.clone();
-		cv::circle(result_img, center, 8, cv::Scalar(255, 0, 0));
-		cv::line(result_img, subpix_corners[0], subpix_corners[2], cv::Scalar(255, 0, 0), 1, CV_AA);
-		cv::line(result_img, subpix_corners[1], subpix_corners[3], cv::Scalar(255, 0, 0), 1, CV_AA);
-
-		cv::line(result_img, subpix_corners[0], subpix_corners[1], cv::Scalar(0, 255, 0), 3, CV_AA);
-		cv::line(result_img, subpix_corners[1], subpix_corners[2], cv::Scalar(0, 255, 0), 3, CV_AA);
-		cv::line(result_img, subpix_corners[2], subpix_corners[3], cv::Scalar(0, 255, 0), 3, CV_AA);
-		cv::line(result_img, subpix_corners[3], subpix_corners[0], cv::Scalar(0, 255, 0), 3, CV_AA);
-		cv::imshow("result", result_img);
-		cv::waitKey(27);
-
+		detect_flag = true;
 		return measured_bridge;
 
 	}//measure
@@ -216,7 +226,7 @@ public:
 		}//if
 
 		//ここから計測
-		cv::Mat target_img = this->color_img.clone();
+		this->target_img = this->color_img.clone();
 		Ribbon-Bridge-Measurement::RibbonBridges measured_bridges;//計測結果の格納用
 
         for(int bbox_count = 0; bbox_count < msg.bounding_boxes.size(); bbox_count++){
@@ -235,9 +245,9 @@ public:
 
         }//bbox_count
 
-        ROS_INFO_STREAM("--- Detect " << boat_corner_array.size() << "Boat ---");
+        ROS_INFO_STREAM("--- Detect " << measured_bridges.RibbonBridges.size() << "Bridges ---");
 
-		if(this->show_result || this->save_result){ this->make_result_image(***********); }//計測結果画像の作成
+		if(this->show_result || this->save_result){ this->make_result_image(measured_bridges); }//計測結果画像の作成
         if(this->show_result == true){ this->publish_result_img(this->result_image); }//結果画像のpublish
         if(this->save_result == true){ this->save_result_img(this->result_image); }//結果画像の保存
 
@@ -270,6 +280,7 @@ private:
     double boat_aspect_ratio;
     double yolo_detect_threshold;
     cv::Mat color_img;
+	cv::Mat target_img;
 	cv::Mat result_img;
 
     int rect_margin;
