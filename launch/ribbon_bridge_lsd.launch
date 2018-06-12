@@ -2,8 +2,8 @@
 <launch>
 
 	<!-- Ribbon-Bridge-Measurement -->
-	<node pkg="Ribbon-Bridge-Measurement" type="ribbon_bridge_lsd_node" name="ribbon_bridge_lsd_node" output="screen">
-		<rosparam command="load" file="$(find Ribbon-Bridge-Measurement)/config/paramater.yaml"/>
+	<node pkg="ribbon_bridge_measurement" type="ribbon_bridge_lsd_node" name="ribbon_bridge_lsd_node" output="screen">
+		<rosparam command="load" file="$(find ribbon_bridge_measurement)/config/paramater.yaml"/>
 	</node>
 
 </launch>
