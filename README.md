@@ -1,18 +1,18 @@
-# Ribbon-Bridge-Measurement
+# ribbon_bridge_measurement
 Ribbon Bridge Measurement project
 
-### launch Ribbon-Bridge-Measurement (LSD version)
+### launch ribbon_bridge_measurement (LSD version)
 
 ```bash
-$ roslaunch Ribbon-Bridge-Measurement ribbon_bridge_lsd.launch  <- only measurement node
-$ roslaunch Ribbon-Bridge-Measurement ribbon_bridge_lsd_with_rviz.launch  <- with rviz
+$ roslaunch ribbon_bridge_measurement ribbon_bridge_lsd.launch  <- only measurement node
+$ roslaunch ribbon_bridge_measurement ribbon_bridge_lsd_with_rviz.launch  <- with rviz
 ```
 
-### launch Ribbon-Bridge-Measurement (Harris-Corner version)
+### launch ribbon_bridge_measurement (Harris-Corner version)
 
 ```bash
-$ roslaunch Ribbon-Bridge-Measurement ribbon_bridge_lsd.launch  <- only measurement node
-$ roslaunch Ribbon-Bridge-Measurement ribbon_bridge_lsd_with_rviz.launch  <- with rviz
+$ roslaunch ribbon_bridge_measurement ribbon_bridge_lsd.launch  <- only measurement node
+$ roslaunch ribbon_bridge_measurement ribbon_bridge_lsd_with_rviz.launch  <- with rviz
 ```
 
 
