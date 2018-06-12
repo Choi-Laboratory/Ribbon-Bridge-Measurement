@@ -38,8 +38,8 @@ public:
         ros::param::get("/boat_bbox_topic_name", boat_bbox_topic_name);
         ros::param::get("/boat_execute_default", exe_flag);
         ros::param::get("/boat_package_name", this_node_name);
-        ros::param::get("/boat_save_result_image", save_result);
-        ros::param::get("/boat_show_result", show_result);
+        ros::param::get("/boat_save_result_image", save_result_flag);
+        ros::param::get("/boat_show_result", show_result_flag);
         ros::param::get("/boat_height", boat_height);
         ros::param::get("/boat_width", boat_width);
         ros::param::get("/yolo_detect_threshold", yolo_detect_threshold);
@@ -61,23 +61,20 @@ public:
         this->exe_flag = msg.data;
     }//contrlCallback
 
-    void rgbImageCallback(const sensor_msgs::Image::ConstPtr& msg){
 
-        try{
-            this->cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-        }catch (cv_bridge::Exception& e){
-            ROS_ERROR("cv_bridge error %s",e.what());
-            return;
-        }
-        cv::Mat &image = this->cv_ptr->image;
-        this->color_img = image.clone();
+    void rgbImageCallback(const sensor_msgs::Image::ConstPtr& msg){
+        try{ this->cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8); }
+        catch (cv_bridge::Exception& e){ return; }
+        this->color_img = this->cv_ptr->image.clone();
     }//rgbImageCallback
 
+
 	void publish_overlay_text(std::string& word){
-		jsk_rviz_plugins::OverlayText text;
-		text.text = word;
-		this->pub_overlay_text.publish(text);
+		jsk_rviz_plugins::OverlayText send_msg;
+		send_msg.text = word;
+		this->pub_overlay_text.publish(send_msg);
 	}//publish_overlay_text
+
 
 	void save_result_img(cv::Mat& image){
 		time_t now = time(NULL);
@@ -86,6 +83,7 @@ public:
 		file_name << ros::package::getPath(this->this_node_name) << "/Result/" << pnow->tm_mon + 1 <<"_"<< pnow->tm_mday <<"_"<< pnow->tm_hour <<"_"<< pnow->tm_min <<"_"<< pnow->tm_sec <<".png";
 		cv::imwrite(file_name.str(), image);
 	}//save_result_img
+
 
 	cv::Rect make_margin_rect(darknet_ros_msgs::BoundingBox yolo_bbox){
 		cv::Rect boat_rect;
@@ -236,9 +234,9 @@ public:
 
         ROS_INFO_STREAM("--- Detect " << measured_bridges.RibbonBridges.size() << "Bridges ---");
 
-		if(this->show_result || this->save_result){ this->make_result_image(measured_bridges); }//計測結果画像の作成
-        if(this->show_result == true){ this->publish_result_img(this->result_img); }//結果画像のpublish
-        if(this->save_result == true){ this->save_result_img(this->result_img); }//結果画像の保存
+		if(this->show_result_flag || this->save_result_flag){ this->make_result_image(measured_bridges); }//計測結果画像の作成
+        if(this->show_result_flag == true){ this->publish_result_img(this->result_img); }//結果画像のpublish
+        if(this->save_result_flag == true){ this->save_result_img(this->result_img); }//結果画像の保存
 
     }//yolobboxCallback
 
@@ -258,8 +256,8 @@ private:
     std::string boat_bbox_topic_name;
     std::string this_node_name;
     int counter;
-    bool save_result;
-    bool show_result;
+    bool save_result_flag;
+    bool show_result_flag;
     bool exe_flag;
     double boat_height;
     double boat_width;
@@ -277,6 +275,11 @@ private:
 int main(int argc, char** argv) {
 
     ros::init(argc, argv, "ribbon_bridge_corner_node");
+
+    std::string name = ros::this_node::getName();
+    std::string test = ros::this_node::getNamespace();
+    std::cout << "this_node_name = " << name << std::endl;
+    std::cout << "namespace = " << test << std::endl;
 
     Ribbon_Bridge_Measurement rbm;
     ros::spin();
