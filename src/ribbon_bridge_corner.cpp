@@ -75,15 +75,6 @@ public:
 	}//publish_overlay_text
 
 
-	void save_result_img(cv::Mat& image){
-		time_t now = time(NULL);
-		struct tm *pnow = localtime(&now);
-		std::stringstream file_name;
-		file_name << ros::package::getPath(this->this_package_name) << "/Result/" << pnow->tm_mon + 1 <<"_"<< pnow->tm_mday <<"_"<< pnow->tm_hour <<"_"<< pnow->tm_min <<"_"<< pnow->tm_sec <<".png";
-		cv::imwrite(file_name.str(), image);
-	}//save_result_img
-
-
 	cv::Rect make_margin_rect(darknet_ros_msgs::BoundingBox yolo_bbox){
 		cv::Rect boat_rect;
 		boat_rect.x = yolo_bbox.xmin - this->rect_margin;
@@ -99,18 +90,35 @@ public:
 		return boat_rect;
 	}//make_margin_rect
 
-	void publish_result_img(cv::Mat& image){
+
+	void save_result_img(){
+		time_t now = time(NULL);
+		struct tm *pnow = localtime(&now);
+		std::stringstream file_name;
+		file_name << ros::package::getPath(this->this_package_name) << "/Result/" << pnow->tm_mon + 1 <<"_"<< pnow->tm_mday <<"_"<< pnow->tm_hour <<"_"<< pnow->tm_min <<"_"<< pnow->tm_sec <<".png";
+		cv::imwrite(file_name.str(), this->result_img);
+	}//save_result_img
+
+
+	void publish_result_img(){
 		std_msgs::Header header; // empty header
 		header.seq = this->counter; // user defined counter
 		header.stamp = ros::Time::now();
 
 		cv_bridge::CvImage result_img;
 		sensor_msgs::Image result_msg;
-		result_img = cv_bridge::CvImage(header, sensor_msgs::image_encodings::BGR8, image);
+		result_img = cv_bridge::CvImage(header, sensor_msgs::image_encodings::BGR8, this->result_img);
 		result_img.toImageMsg(result_msg); // from cv_bridge to sensor_msgs::Image
 		this->pub_result_img.publish(result_msg);
 		this->counter++;
 	}//publish_result_img
+
+
+    void show_result_image(){
+        cv::imshow("Ribbon_Bridge_Corner_Result", this->result_img);
+        cv::waitKey(27);
+    }//show_result_image
+
 
 	void make_result_image(ribbon_bridge_measurement::RibbonBridges data){
 
@@ -231,9 +239,10 @@ public:
 
         ROS_INFO_STREAM("--- Detect " << measured_bridges.RibbonBridges.size() << "Bridges ---");
 
-		if(this->show_result_flag || this->save_result_flag){ this->make_result_image(measured_bridges); }//計測結果画像の作成
-        if(this->show_result_flag == true){ this->publish_result_img(this->result_img); }//結果画像のpublish
-        if(this->save_result_flag == true){ this->save_result_img(this->result_img); }//結果画像の保存
+		if(this->show_result_flag || this->save_result_flag || this->pub_result_flag){ this->make_result_image(measured_bridges); }//計測結果画像の作成
+        if(this->show_result_flag == true){ this->show_result_image(); }//結果画像のpublish
+        if(this->save_result_flag == true){ this->save_result_img(); }//結果画像の保存
+        if(this->pub_result_flag == true){ this->publish_result_img(); }//結果画像のpublish
 
     }//yolobboxCallback
 
