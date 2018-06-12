@@ -128,11 +128,12 @@ public:
 
 	Ribbon-Bridge-Measurement::RibbonBridge measure(cv::Mat& target_img, cv::Rect& bridge_rect, bool& detect_flag){
 
+		Ribbon-Bridge-Measurement::RibbonBridge measured_bridge;//返り値用
 		cv::Mat bridge_img(target_img, bridge_rect);//画像のトリミング
 
 		cv::Mat gray_img;
 		cv::Mat bin_img;
-		cv::cvtColor(image, gray_img, CV_BGR2GRAY);
+		cv::cvtColor(bridge_img, gray_img, CV_BGR2GRAY);
 		cv::normalize(gray_img, gray_img, 0, 255, cv::NORM_MINMAX);
 		cv::threshold(gray_img, bin_img, 220, 255, cv::THRESH_BINARY);//220で2値化処理
 		cv::erode(bin_img, bin_img, cv::Mat(), cv::Point(-1, -1), 1);//拡大縮小によるノイズ除去
@@ -142,12 +143,11 @@ public:
 		cv::goodFeaturesToTrack(bin_img, corners, 32, 0.01, 3, cv::Mat(), 3, true);
 		if (corners.size() < 4) { return; }
 
-		for (int i = 0; i < corners.size(); i++) {
-			cv::circle(image, cv::Point(corners[i].x, corners[i].y), 1, cv::Scalar(0, 255, 0), -1);
-			cv::circle(image, cv::Point(corners[i].x, corners[i].y), 8, cv::Scalar(0, 255, 0));
-		}
+		//for (int i = 0; i < corners.size(); i++) {
+			//cv::circle(image, cv::Point(corners[i].x, corners[i].y), 1, cv::Scalar(0, 255, 0), -1);
+			//cv::circle(image, cv::Point(corners[i].x, corners[i].y), 8, cv::Scalar(0, 255, 0));
+		//}
 
-		cv::Mat result_img = image.clone();
 		cv::RotatedRect rc = cv::minAreaRect(corners);
 		cv::Point2f vertexes[4];
 		rc.points(vertexes);
@@ -161,10 +161,7 @@ public:
 			for (int j = 0; j < corners.size(); j++) {
 				cv::Point2f sub_point = points[i] - corners[j];
 				double distance = sqrt(pow(sub_point.x, 2) + pow(sub_point.y, 2));
-				if (distance < min_distance) {
-					min_distance = distance;
-					min_point = corners[j];
-				}//if
+				if (distance < min_distance) { min_distance = distance; min_point = corners[j];	}//最短距離のコーナーを更新
 			}//for_j
 			subpix_corners.push_back(min_point);
 		}//for_i
@@ -178,14 +175,24 @@ public:
 		double a2 = (subpix_corners[3].y - subpix_corners[1].y) / (subpix_corners[3].x - subpix_corners[1].x);
 		center.x = (a1 * subpix_corners[0].x - subpix_corners[0].y - a2 * subpix_corners[1].x + subpix_corners[1].y) / (a1 - a2);
 		center.y = (subpix_corners[2].y - subpix_corners[0].y) / (subpix_corners[2].x - subpix_corners[0].x)*(center.x - subpix_corners[0].x) + subpix_corners[0].y;
-		cv::circle(result_img, center, 8, cv::Scalar(255, 0, 0));
 
 		//angle�̎Z�o
 		//double len_03 = sqrt(pow((subpix_corners[3]- subpix_corners[0]).x, 2) + pow((subpix_corners[3] - subpix_corners[0]).y, 2));
 		//double len_01 = sqrt(pow((subpix_corners[1] - subpix_corners[0]).x, 2) + pow((subpix_corners[1] - subpix_corners[0]).y, 2));
 
+		//計測結果の格納
+		measured_bridge.center.x = center.x + bridge_rect.x;
+		measured_bridge.center.x = center.y + bridge_rect.y;
+		for(int i = 0; i < 4; i++){
+			geometry_msgs::Pose2D corner_pt;
+			corner_pt.x = subpix_corners[i].x + bridge_rect.x;
+			corner_pt.y = subpix_corners[i].y + bridge_rect.y;
+			measured_bridge.corners.push_back(corner_pt);
+		}//for
 
 		//結果の描画
+		cv::Mat result_img = bridge_img.clone();
+		cv::circle(result_img, center, 8, cv::Scalar(255, 0, 0));
 		cv::line(result_img, subpix_corners[0], subpix_corners[2], cv::Scalar(255, 0, 0), 1, CV_AA);
 		cv::line(result_img, subpix_corners[1], subpix_corners[3], cv::Scalar(255, 0, 0), 1, CV_AA);
 
@@ -196,6 +203,7 @@ public:
 		cv::imshow("result", result_img);
 		cv::waitKey(27);
 
+		return measured_bridge;
 
 	}//measure
 
