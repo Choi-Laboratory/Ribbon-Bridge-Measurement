@@ -51,7 +51,8 @@ public:
         this->sub_ctrl_flag = nh.subscribe(contrl_topic_name, 1, &Ribbon_Bridge_Measurement::contrlCallback, this);
         this->sub_yolo_bbox = nh.subscribe(yolo_topic_name, 1, &Ribbon_Bridge_Measurement::yolobboxCallback, this);
         this->pub_result_img = nh.advertise<sensor_msgs::Image>("result_img", 1);
-        this->pub_overlay_text = nh.advertise<jsk_rviz_plugins::OverlayText>("overlay_text", 1);
+        this->pub_overlay_text = nh.advertise<jsk_rviz_plugins::OverlayText>("result_info", 1);
+        this->pub_ribbon_bridges_msg = nh.advertise<ribbon_bridge_measurement::RibbonBridges>("result_data", 1);
 
     }//Ribbon_Bridge_Measurement()
 
@@ -146,7 +147,6 @@ public:
 	bool measure(cv::Mat& target_img, cv::Rect& bridge_rect, ribbon_bridge_measurement::RibbonBridge& measured_bridge){
 
 		cv::Mat bridge_img(target_img, bridge_rect);//画像のトリミング
-
 		cv::Mat gray_img;
 		cv::Mat bin_img;
 		cv::cvtColor(bridge_img, gray_img, CV_BGR2GRAY);
@@ -198,7 +198,7 @@ public:
 
 		//計測結果の格納
 		measured_bridge.center.x = center.x + bridge_rect.x;
-		measured_bridge.center.x = center.y + bridge_rect.y;
+		measured_bridge.center.y = center.y + bridge_rect.y;
 		for(int i = 0; i < 4; i++){
 			geometry_msgs::Pose2D corner_pt;
 			corner_pt.x = subpix_corners[i].x + bridge_rect.x;
@@ -242,7 +242,7 @@ public:
         if(this->show_result_flag == true){ this->show_result_image(); }//結果画像のpublish
         if(this->save_result_flag == true){ this->save_result_img(); }//結果画像の保存
         if(this->pub_result_flag == true){ this->publish_result_img(); }//結果画像のpublish
-
+        this->pub_ribbon_bridges_msg.publish(measured_bridges);//検出結果のpublish
     }//yolobboxCallback
 
 private:
@@ -253,6 +253,7 @@ private:
     ros::Subscriber sub_yolo_bbox;
     ros::Publisher pub_result_img;
     ros::Publisher pub_overlay_text;
+    ros::Publisher pub_ribbon_bridges_msg;
 
     cv_bridge::CvImagePtr cv_ptr;
 
