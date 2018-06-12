@@ -192,7 +192,7 @@ public:
 		center.x = (a1 * subpix_corners[0].x - subpix_corners[0].y - a2 * subpix_corners[1].x + subpix_corners[1].y) / (a1 - a2);
 		center.y = (subpix_corners[2].y - subpix_corners[0].y) / (subpix_corners[2].x - subpix_corners[0].x)*(center.x - subpix_corners[0].x) + subpix_corners[0].y;
 
-		//angle�̎Z�o
+		//angleの計測
 		//double len_03 = sqrt(pow((subpix_corners[3]- subpix_corners[0]).x, 2) + pow((subpix_corners[3] - subpix_corners[0]).y, 2));
 		//double len_01 = sqrt(pow((subpix_corners[1] - subpix_corners[0]).x, 2) + pow((subpix_corners[1] - subpix_corners[0]).y, 2));
 
@@ -226,9 +226,8 @@ public:
 			//確率が低い場合の例外処理
             if(msg.bounding_boxes[bbox_count].probability < this->yolo_detect_threshold){continue;}
 
+            ribbon_bridge_measurement::RibbonBridge bridge_data;
             cv::Rect bridge_rect = this->make_margin_rect(msg.bounding_boxes[bbox_count]);//余白を付与したrectの作成
-
-			ribbon_bridge_measurement::RibbonBridge bridge_data;
             bool detect_flag = this->measure(target_img, bridge_rect, bridge_data);//矩形領域から浮橋を検出
 
 			if(detect_flag == true){
@@ -239,7 +238,7 @@ public:
 
         ROS_INFO_STREAM("--- Detect " << measured_bridges.RibbonBridges.size() << "Bridges ---");
 
-		if(this->show_result_flag || this->save_result_flag || this->pub_result_flag){ this->make_result_image(measured_bridges); }//計測結果画像の作成
+        if(this->show_result_flag || this->save_result_flag || this->pub_result_flag){ this->make_result_image(measured_bridges); }//計測結果画像の作成
         if(this->show_result_flag == true){ this->show_result_image(); }//結果画像のpublish
         if(this->save_result_flag == true){ this->save_result_img(); }//結果画像の保存
         if(this->pub_result_flag == true){ this->publish_result_img(); }//結果画像のpublish
@@ -269,8 +268,8 @@ private:
     double boat_aspect_ratio;
     double yolo_detect_threshold;
     cv::Mat color_img;
-	cv::Mat target_img;
-	cv::Mat result_img;
+    cv::Mat target_img;
+    cv::Mat result_img;
 
     int rect_margin;
 
