@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-    <name>Ribbon-Bridge-Measurement</name>
+    <name>ribbon_bridge_measurement</name>
     <version>0.0.0</version>
-    <description>The Ribbon-Bridge-Measurement package</description>
+    <description>The ribbon_bridge_measurement package</description>
 
     <maintainer email="e17m5211@soka-u.jp">Noriyuki Kugou</maintainer>
 
