@@ -27,11 +27,11 @@
 #define PI 3.141592653589793
 
 
-class Ribbon_Bridge_Measurement{
+class RibbonBridgeMeasurement{
 
 public:
 
-    Ribbon_Bridge_Measurement(){
+    RibbonBridgeMeasurement(){
 
         ros::param::get("show_result_img_flag", show_result_flag);
         ros::param::get("execute_default_flag", execute_flag);
@@ -47,14 +47,14 @@ public:
         ros::param::get("yolo_rect_margin_px", rect_margin);
 
         this->counter = 0;
-        this->sub_camera_img = nh.subscribe(image_topic_name, 1, &Ribbon_Bridge_Measurement::rgbImageCallback, this);
-        this->sub_ctrl_flag = nh.subscribe(contrl_topic_name, 1, &Ribbon_Bridge_Measurement::contrlCallback, this);
-        this->sub_yolo_bbox = nh.subscribe(yolo_topic_name, 1, &Ribbon_Bridge_Measurement::yolobboxCallback, this);
+        this->sub_camera_img = nh.subscribe(image_topic_name, 1, &RibbonBridgeMeasurement::rgbImageCallback, this);
+        this->sub_ctrl_flag = nh.subscribe(contrl_topic_name, 1, &RibbonBridgeMeasurement::contrlCallback, this);
+        this->sub_yolo_bbox = nh.subscribe(yolo_topic_name, 1, &RibbonBridgeMeasurement::yolobboxCallback, this);
         this->pub_result_img = nh.advertise<sensor_msgs::Image>("result_img", 1);
         this->pub_overlay_text = nh.advertise<jsk_rviz_plugins::OverlayText>("result_info", 1);
         this->pub_ribbon_bridges_msg = nh.advertise<ribbon_bridge_measurement::RibbonBridges>("result_data", 1);
 
-    }//Ribbon_Bridge_Measurement()
+    }//RibbonBridgeMeasurement()
 
 
     void contrlCallback(const std_msgs::Bool& msg){
@@ -219,7 +219,7 @@ public:
 
 		//ここから計測
 		this->target_img = this->color_img.clone();
-		ribbon_bridge_measurement::RibbonBridges measured_bridges;//計測結果の格納用
+		ribbon_bridge_measurement::RibbonBridges measuredBridges;//計測結果の格納用
 
         for(int bbox_count = 0; bbox_count < msg.bounding_boxes.size(); bbox_count++){
 
@@ -231,18 +231,18 @@ public:
             bool detect_flag = this->measure(target_img, bridge_rect, bridge_data);//矩形領域から浮橋を検出
 
 			if(detect_flag == true){
-				measured_bridges.RibbonBridges.push_back(bridge_data);
+				measuredBridges.RibbonBridges.push_back(bridge_data);
 			}
 
         }//bbox_count
 
-        ROS_INFO_STREAM("--- Detect " << measured_bridges.RibbonBridges.size() << "Bridges ---");
+        ROS_INFO_STREAM("--- Detect " << measuredBridges.RibbonBridges.size() << "Bridges ---");
 
-        if(this->show_result_flag || this->save_result_flag || this->pub_result_flag){ this->make_result_image(measured_bridges); }//計測結果画像の作成
+        if(this->show_result_flag || this->save_result_flag || this->pub_result_flag){ this->make_result_image(measuredBridges); }//計測結果画像の作成
         if(this->show_result_flag == true){ this->show_result_image(); }//結果画像のpublish
         if(this->save_result_flag == true){ this->save_result_img(); }//結果画像の保存
         if(this->pub_result_flag == true){ this->publish_result_img(); }//結果画像のpublish
-        this->pub_ribbon_bridges_msg.publish(measured_bridges);//検出結果のpublish
+        this->pub_ribbon_bridges_msg.publish(measuredBridges);//検出結果のpublish
     }//yolobboxCallback
 
 private:
@@ -274,14 +274,14 @@ private:
 
     int rect_margin;
 
-};//Ribbon_Bridge_Measurement
+};//RibbonBridgeMeasurement
 
 
 int main(int argc, char** argv) {
 
     ros::init(argc, argv, "ribbon_bridge_corner_node");
 
-    Ribbon_Bridge_Measurement rbm;
+    RibbonBridgeMeasurement rbm;
     ros::spin();
     return 0;
 

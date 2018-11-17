@@ -1,4 +1,4 @@
-<!--RoboCup 2017 Object Detect-->
+<!-- Ribbon Bridge Detector-->
 <launch>
 
 	<group ns = "ribbon_bridge_measurement">

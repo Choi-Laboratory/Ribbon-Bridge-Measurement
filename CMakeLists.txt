@@ -63,3 +63,7 @@ add_dependencies(ribbon_bridge_lsd_node ${PROJECT_NAME}_generate_messages_cpp)
 add_executable(ribbon_bridge_corner_node src/ribbon_bridge_corner.cpp)
 target_link_libraries(ribbon_bridge_corner_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
 add_dependencies(ribbon_bridge_corner_node ${PROJECT_NAME}_generate_messages_cpp)
+
+add_executable(ribbon_bridge_tracker_node src/ribbon_bridge_tracker.cpp)
+target_link_libraries(ribbon_bridge_tracker_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
+add_dependencies(ribbon_bridge_tracker_node ${PROJECT_NAME}_generate_messages_cpp)
