@@ -1,0 +1,11 @@
+<!-- camera.launch -->
+<launch>
+
+  <!-- main -->
+  <node pkg="uvc_camera" type="uvc_camera_node" name="uvc_camera_node" output="screen">
+    <remap from="/image_raw" to="/camera/rgb/image_raw"/>
+    <param name="device" type="str" value="/dev/video1"/>
+  </node>
+
+
+</launch>
