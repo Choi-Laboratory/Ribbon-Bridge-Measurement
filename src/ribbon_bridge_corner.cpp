@@ -34,32 +34,23 @@ public:
     RibbonBridgeMeasurement(){
 
         ros::param::get("show_result_img_flag", show_result_flag);
-        ros::param::get("execute_default_flag", execute_flag);
         ros::param::get("pub_result_img_flag", pub_result_flag);
         ros::param::get("save_result_img_flag", save_result_flag);
 
-        ros::param::get("sub_ctrl_topic_name", contrl_topic_name);
         ros::param::get("sub_image_topic_name", image_topic_name);
         ros::param::get("sub_yolo_topic_name", yolo_topic_name);
 
         ros::param::get("this_package_name", this_package_name);
-        ros::param::get("yolo_prob_threshold", yolo_detect_threshold);
         ros::param::get("yolo_rect_margin_px", rect_margin);
 
-        this->counter = 0;
-        this->sub_camera_img = nh.subscribe(image_topic_name, 1, &RibbonBridgeMeasurement::rgbImageCallback, this);
-        this->sub_ctrl_flag = nh.subscribe(contrl_topic_name, 1, &RibbonBridgeMeasurement::contrlCallback, this);
-        this->sub_yolo_bbox = nh.subscribe(yolo_topic_name, 1, &RibbonBridgeMeasurement::yolobboxCallback, this);
-        this->pub_result_img = nh.advertise<sensor_msgs::Image>("result_img", 1);
-        this->pub_overlay_text = nh.advertise<jsk_rviz_plugins::OverlayText>("result_info", 1);
-        this->pub_ribbon_bridges_msg = nh.advertise<ribbon_bridge_measurement::RibbonBridges>("result_data", 1);
+        this->counter                = 0;
+        this->sub_camera_img         = nh.subscribe(image_topic_name, 1, &RibbonBridgeMeasurement::rgbImageCallback, this);
+        this->sub_yolo_bbox          = nh.subscribe(yolo_topic_name, 1, &RibbonBridgeMeasurement::yolobboxCallback, this);
+        this->pub_result_img         = nh.advertise<sensor_msgs::Image>("result_img", 1);
+        this->pub_overlay_text       = nh.advertise<jsk_rviz_plugins::OverlayText>("result_info", 1);
+        this->pub_ribbon_bridges_msg = nh.advertise<ribbon_bridge_measurement::RibbonBridges>("ribbon_bridges", 1);
 
     }//RibbonBridgeMeasurement()
-
-
-    void contrlCallback(const std_msgs::Bool& msg){
-        this->execute_flag = msg.data;
-    }//contrlCallback
 
 
     void rgbImageCallback(const sensor_msgs::Image::ConstPtr& msg){
@@ -69,100 +60,96 @@ public:
     }//rgbImageCallback
 
 
-	void publish_overlay_text(std::string& word){
-		jsk_rviz_plugins::OverlayText send_msg;
-		send_msg.text = word;
-		this->pub_overlay_text.publish(send_msg);
-	}//publish_overlay_text
+    void yolobboxCallback(const darknet_ros_msgs::BoundingBoxes& msg){
+
+        if(this->color_img.empty() == true){ return; }
+
+		this->target_img = this->color_img.clone();
+		ribbon_bridge_measurement::RibbonBridges measuredBridges;//計測結果の格納用
+
+        for(int bbox_count = 0; bbox_count < msg.bounding_boxes.size(); bbox_count++){
+            ribbon_bridge_measurement::RibbonBridge bridge_data;
+            cv::Rect bridge_rect = this->make_margin_rect(msg.bounding_boxes[bbox_count]);
+            bool detect_flag = this->measure_ribbon_bridge(target_img, bridge_rect, bridge_data);
+			if(detect_flag == true){ measuredBridges.RibbonBridges.push_back(bridge_data); }
+        }//bbox_count
+
+        ROS_INFO_STREAM("--- Detect " << measuredBridges.RibbonBridges.size() << "Bridges. ---");
+
+        if(this->show_result_flag || this->save_result_flag || this->pub_result_flag){ this->make_result_image(measuredBridges); }
+        if(this->show_result_flag == true){ this->show_result_image(); }
+        if(this->save_result_flag == true){ this->save_result_img(); }
+        if(this->pub_result_flag  == true){ this->publish_result_img(); }
+        this->pub_ribbon_bridges_msg.publish(measuredBridges);
+
+    }//yolobboxCallback
 
 
 	cv::Rect make_margin_rect(darknet_ros_msgs::BoundingBox yolo_bbox){
-		cv::Rect boat_rect;
-		boat_rect.x = yolo_bbox.xmin - this->rect_margin;
-		boat_rect.y = yolo_bbox.ymin - this->rect_margin;
-		boat_rect.width = (yolo_bbox.xmax - boat_rect.x) + (this->rect_margin * 2);
-		boat_rect.height = (yolo_bbox.ymax - boat_rect.y) + (this->rect_margin * 2);
+        cv::Rect boat_rect;
+        boat_rect.x = yolo_bbox.xmin - this->rect_margin;
+        boat_rect.y = yolo_bbox.ymin - this->rect_margin;
+        boat_rect.width = (yolo_bbox.xmax - boat_rect.x) + (this->rect_margin * 2);
+        boat_rect.height = (yolo_bbox.ymax - boat_rect.y) + (this->rect_margin * 2);
 
-		if(boat_rect.x < 0){boat_rect.x = 0;}
-		if(boat_rect.y < 0){boat_rect.y = 0;}
-		if((boat_rect.x + boat_rect.width) > this->color_img.cols){ boat_rect.width = (this->color_img.cols - boat_rect.x);}
-		if((boat_rect.y + boat_rect.height) > this->color_img.rows){ boat_rect.height = (this->color_img.rows - boat_rect.y);}
+        if(boat_rect.x < 0){boat_rect.x = 0;}
+        if(boat_rect.y < 0){boat_rect.y = 0;}
+        if((boat_rect.x + boat_rect.width) > this->color_img.cols){ boat_rect.width = (this->color_img.cols - boat_rect.x);}
+        if((boat_rect.y + boat_rect.height) > this->color_img.rows){ boat_rect.height = (this->color_img.rows - boat_rect.y);}
 
 		return boat_rect;
 	}//make_margin_rect
 
 
-	void save_result_img(){
-		time_t now = time(NULL);
-		struct tm *pnow = localtime(&now);
-		std::stringstream file_name;
-		file_name << ros::package::getPath(this->this_package_name) << "/Result/" << pnow->tm_mon + 1 <<"_"<< pnow->tm_mday <<"_"<< pnow->tm_hour <<"_"<< pnow->tm_min <<"_"<< pnow->tm_sec <<".png";
-		cv::imwrite(file_name.str(), this->result_img);
-	}//save_result_img
-
-
-	void publish_result_img(){
-		std_msgs::Header header; // empty header
-		header.seq = this->counter; // user defined counter
-		header.stamp = ros::Time::now();
-
-		cv_bridge::CvImage result_img;
-		sensor_msgs::Image result_msg;
-		result_img = cv_bridge::CvImage(header, sensor_msgs::image_encodings::BGR8, this->result_img);
-		result_img.toImageMsg(result_msg); // from cv_bridge to sensor_msgs::Image
-		this->pub_result_img.publish(result_msg);
-		this->counter++;
-	}//publish_result_img
-
-
-    void show_result_image(){
-        cv::imshow("Ribbon_Bridge_Corner_Result", this->result_img);
-        cv::waitKey(27);
-    }//show_result_image
-
-
-	void make_result_image(ribbon_bridge_measurement::RibbonBridges data){
-
-		this->result_img = this->target_img.clone();//結果の描画用画像の確保
-
-		for(int i = 0; i < data.RibbonBridges.size(); i++){
-
-			cv::Point2f center = cv::Point2f(data.RibbonBridges[i].center.x, data.RibbonBridges[i].center.y);
-			cv::circle(this->result_img, center, 8, cv::Scalar(255, 0, 0));
-
-			std::vector<cv::Point2f> corners;
-			for(int j = 0; j < data.RibbonBridges[i].corners.size(); j++){
-				cv::Point2f corner = cv::Point2f(data.RibbonBridges[i].corners[j].x, data.RibbonBridges[i].corners[j].y);
-				corners.push_back(corner);
-			}//for
-			cv::line(this->result_img, corners[0], corners[2], cv::Scalar(255, 0, 0), 1, CV_AA);//クロスラインの描画
-			cv::line(this->result_img, corners[1], corners[3], cv::Scalar(255, 0, 0), 1, CV_AA);
-			cv::line(this->result_img, corners[0], corners[1], cv::Scalar(0, 255, 0), 3, CV_AA);//矩形の描画
-			cv::line(this->result_img, corners[1], corners[2], cv::Scalar(0, 255, 0), 3, CV_AA);
-			cv::line(this->result_img, corners[2], corners[3], cv::Scalar(0, 255, 0), 3, CV_AA);
-			cv::line(this->result_img, corners[3], corners[0], cv::Scalar(0, 255, 0), 3, CV_AA);
-		}//for
-	}//make_result_image
-
-	bool measure(cv::Mat& target_img, cv::Rect& bridge_rect, ribbon_bridge_measurement::RibbonBridge& measured_bridge){
+	bool measure_ribbon_bridge(cv::Mat& target_img, cv::Rect& bridge_rect, ribbon_bridge_measurement::RibbonBridge& measured_bridge){
 
 		cv::Mat bridge_img(target_img, bridge_rect);//画像のトリミング
 		cv::Mat gray_img;
-		cv::Mat bin_img;
+		//cv::Mat bin_img;
 		cv::cvtColor(bridge_img, gray_img, CV_BGR2GRAY);
 		cv::normalize(gray_img, gray_img, 0, 255, cv::NORM_MINMAX);
-		cv::threshold(gray_img, bin_img, 220, 255, cv::THRESH_BINARY);//220で2値化処理
-		cv::erode(bin_img, bin_img, cv::Mat(), cv::Point(-1, -1), 1);//拡大縮小によるノイズ除去
-		cv::dilate(bin_img, bin_img, cv::Mat(), cv::Point(-1, -1), 1);
+		//cv::threshold(gray_img, bin_img, 200, 255, cv::THRESH_BINARY);//220で2値化処理
+		//cv::erode(bin_img, bin_img, cv::Mat(), cv::Point(-1, -1), 1);//拡大縮小によるノイズ除去
+		//cv::dilate(bin_img, bin_img, cv::Mat(), cv::Point(-1, -1), 1);
 
 		std::vector<cv::Point2f> corners;
-		cv::goodFeaturesToTrack(bin_img, corners, 32, 0.01, 3, cv::Mat(), 3, true);
+		cv::goodFeaturesToTrack(gray_img, corners, 32, 0.01, 3, cv::Mat(), 3, true);
 		if (corners.size() < 4) { return false; }
 
-		//for (int i = 0; i < corners.size(); i++) {
-			//cv::circle(image, cv::Point(corners[i].x, corners[i].y), 1, cv::Scalar(0, 255, 0), -1);
-			//cv::circle(image, cv::Point(corners[i].x, corners[i].y), 8, cv::Scalar(0, 255, 0));
-		//}
+        //cv::Mat descriptor;
+        std::vector<cv::KeyPoint> keypoints;
+        //cv::KeyPoint::convert(corners, keypoints);
+        auto orb = cv::ORB::create();
+        //orb->setMaxFeatures(32);
+        orb->detect(gray_img, keypoints);
+        //orb->compute(gray_img, keypoints, descriptor);
+
+
+        std::vector<cv::KeyPoint> keypoints_next;
+        for(int i = 0; i < corners.size(); i++){
+            double length = DBL_MAX;
+            int temp_index = -1;
+            for(int key = 0; key < keypoints.size(); key++){
+                double temp_distance = sqrt(pow(corners[i].x-keypoints[key].pt.x,2)+pow(corners[i].y-keypoints[key].pt.y,2));
+                if(temp_distance < length){
+                    length = temp_distance;
+                    temp_index = key;
+                }
+            }
+            keypoints_next.push_back(keypoints[temp_index]);
+        }//for
+
+        cv::Mat dstImg;
+        cv::drawKeypoints(target_img, keypoints_next, dstImg, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+        cv::imshow("Keypoints", dstImg);
+
+		for (int i = 0; i < corners.size(); i++) {
+			cv::circle(gray_img, cv::Point(corners[i].x, corners[i].y), 1, cv::Scalar(0, 255, 0), -1);
+			cv::circle(gray_img, cv::Point(corners[i].x, corners[i].y), 8, cv::Scalar(0, 255, 0));
+		}
+        cv::imshow("gray_img", gray_img);
+        //cv::imshow("bin_image", bin_img);
+        cv::waitKey(27);
 
 		cv::RotatedRect rc = cv::minAreaRect(corners);
 		cv::Point2f vertexes[4];
@@ -209,41 +196,66 @@ public:
 		return true;
 	}//measure
 
-    void yolobboxCallback(const darknet_ros_msgs::BoundingBoxes& msg){
 
-        if(this->execute_flag == false){ return; }
-        if(this->color_img.empty() == true){
-			ROS_ERROR_STREAM("yolobboxCallback -> image empty");
-			return;
-		}//if
+	void save_result_img(){
+		time_t now = time(NULL);
+		struct tm *pnow = localtime(&now);
+		std::stringstream file_name;
+		file_name << ros::package::getPath(this->this_package_name) << "/Result/" << pnow->tm_mon + 1 <<"_"<< pnow->tm_mday <<"_"<< pnow->tm_hour <<"_"<< pnow->tm_min <<"_"<< pnow->tm_sec <<".png";
+		cv::imwrite(file_name.str(), this->result_img);
+	}//save_result_img
 
-		//ここから計測
-		this->target_img = this->color_img.clone();
-		ribbon_bridge_measurement::RibbonBridges measuredBridges;//計測結果の格納用
 
-        for(int bbox_count = 0; bbox_count < msg.bounding_boxes.size(); bbox_count++){
+	void publish_result_img(){
+		std_msgs::Header header; // empty header
+		header.seq = this->counter; // user defined counter
+		header.stamp = ros::Time::now();
 
-			//確率が低い場合の例外処理
-            if(msg.bounding_boxes[bbox_count].probability < this->yolo_detect_threshold){continue;}
+		cv_bridge::CvImage result_img;
+		sensor_msgs::Image result_msg;
+		result_img = cv_bridge::CvImage(header, sensor_msgs::image_encodings::BGR8, this->result_img);
+		result_img.toImageMsg(result_msg); // from cv_bridge to sensor_msgs::Image
+		this->pub_result_img.publish(result_msg);
+		this->counter++;
+	}//publish_result_img
 
-            ribbon_bridge_measurement::RibbonBridge bridge_data;
-            cv::Rect bridge_rect = this->make_margin_rect(msg.bounding_boxes[bbox_count]);//余白を付与したrectの作成
-            bool detect_flag = this->measure(target_img, bridge_rect, bridge_data);//矩形領域から浮橋を検出
 
-			if(detect_flag == true){
-				measuredBridges.RibbonBridges.push_back(bridge_data);
-			}
+    void show_result_image(){
+        cv::imshow("Ribbon_Bridge_Corner_Result", this->result_img);
+        cv::waitKey(27);
+    }//show_result_image
 
-        }//bbox_count
 
-        ROS_INFO_STREAM("--- Detect " << measuredBridges.RibbonBridges.size() << "Bridges ---");
+	void publish_overlay_text(std::string& word){
+		jsk_rviz_plugins::OverlayText send_msg;
+		send_msg.text = word;
+		this->pub_overlay_text.publish(send_msg);
+	}//publish_overlay_text
 
-        if(this->show_result_flag || this->save_result_flag || this->pub_result_flag){ this->make_result_image(measuredBridges); }//計測結果画像の作成
-        if(this->show_result_flag == true){ this->show_result_image(); }//結果画像のpublish
-        if(this->save_result_flag == true){ this->save_result_img(); }//結果画像の保存
-        if(this->pub_result_flag == true){ this->publish_result_img(); }//結果画像のpublish
-        this->pub_ribbon_bridges_msg.publish(measuredBridges);//検出結果のpublish
-    }//yolobboxCallback
+
+	void make_result_image(ribbon_bridge_measurement::RibbonBridges data){
+
+		this->result_img = this->target_img.clone();//結果の描画用画像の確保
+
+		for(int i = 0; i < data.RibbonBridges.size(); i++){
+
+			cv::Point2f center = cv::Point2f(data.RibbonBridges[i].center.x, data.RibbonBridges[i].center.y);
+			cv::circle(this->result_img, center, 8, cv::Scalar(255, 0, 0));
+
+			std::vector<cv::Point2f> corners;
+			for(int j = 0; j < data.RibbonBridges[i].corners.size(); j++){
+				cv::Point2f corner = cv::Point2f(data.RibbonBridges[i].corners[j].x, data.RibbonBridges[i].corners[j].y);
+				corners.push_back(corner);
+			}//for
+			cv::line(this->result_img, corners[0], corners[2], cv::Scalar(255, 0, 0), 1, CV_AA);//クロスラインの描画
+			cv::line(this->result_img, corners[1], corners[3], cv::Scalar(255, 0, 0), 1, CV_AA);
+			cv::line(this->result_img, corners[0], corners[1], cv::Scalar(0, 255, 0), 3, CV_AA);//矩形の描画
+			cv::line(this->result_img, corners[1], corners[2], cv::Scalar(0, 255, 0), 3, CV_AA);
+			cv::line(this->result_img, corners[2], corners[3], cv::Scalar(0, 255, 0), 3, CV_AA);
+			cv::line(this->result_img, corners[3], corners[0], cv::Scalar(0, 255, 0), 3, CV_AA);
+		}//for
+	}//make_result_image
+
 
 private:
 
@@ -258,16 +270,13 @@ private:
     cv_bridge::CvImagePtr cv_ptr;
 
     std::string image_topic_name;
-    std::string contrl_topic_name;
     std::string yolo_topic_name;
     std::string this_package_name;
     int counter;
     bool save_result_flag;
     bool show_result_flag;
     bool pub_result_flag;
-    bool execute_flag;
     double boat_aspect_ratio;
-    double yolo_detect_threshold;
     cv::Mat color_img;
     cv::Mat target_img;
     cv::Mat result_img;
