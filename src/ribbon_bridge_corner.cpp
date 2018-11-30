@@ -104,6 +104,7 @@ public:
 	bool measure_ribbon_bridge(cv::Mat& target_img, cv::Rect& bridge_rect, ribbon_bridge_measurement::RibbonBridge& measured_bridge){
 
 		cv::Mat bridge_img(target_img, bridge_rect);//画像のトリミング
+        cv::Point2i center_pt = cv::Point2i(bridge_img.rows*0.5, bridge_img.cols*0.5);
 		cv::Mat gray_img;
 		//cv::Mat bin_img;
 		cv::cvtColor(bridge_img, gray_img, CV_BGR2GRAY);
@@ -116,6 +117,7 @@ public:
 		cv::goodFeaturesToTrack(gray_img, corners, 32, 0.01, 3, cv::Mat(), 3, true);
 		if (corners.size() < 4) { return false; }
 
+        /*
         //cv::Mat descriptor;
         std::vector<cv::KeyPoint> keypoints;
         //cv::KeyPoint::convert(corners, keypoints);
@@ -142,6 +144,31 @@ public:
         cv::Mat dstImg;
         cv::drawKeypoints(target_img, keypoints_next, dstImg, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
         cv::imshow("Keypoints", dstImg);
+        */
+
+        std::vector<std::pair<float, int>> distance_and_index;
+        for(int i = 0; i < corners.size(); i++){
+            float distance = sqrt(pow(corners[i].x-center_pt.x,2)+pow(corners[i].y-center_pt.y,2));
+            int index = i;
+            std::pair<float, int> temp_data = std::make_pair(distance, index);
+            distance_and_index.push_back(temp_data);
+        }
+        sort(distance_and_index.begin(), distance_and_index.end());
+
+        std::cout << "***************************" << std::endl;
+        for(int i = 0; i < distance_and_index.size(); i ++){
+            std::cout << "distance = " << distance_and_index[i].first << " index = " << distance_and_index[i].second << std::endl;
+        }
+
+        //ここから近い物順に選択＆組み合わせを試していく
+
+        for(int num = 4; num < distance_and_index.size(); num++){
+            std::vector<cv::Point2i> selected_corners;
+            for(int i = 0; i < num; i++){
+                selected_corners.push_back(corners[distance_and_index[i].second]);
+            }
+        }
+
 
 		for (int i = 0; i < corners.size(); i++) {
 			cv::circle(gray_img, cv::Point(corners[i].x, corners[i].y), 1, cv::Scalar(0, 255, 0), -1);
@@ -156,20 +183,9 @@ public:
 		rc.points(vertexes);
 		std::vector<cv::Point2f> points(vertexes, vertexes + 4);
 
-		//minAreaRectで推定されたコーナーに最も近いコーナーを算出
+		//minAreaRectで推定されたコーナーを基に浮橋の位置を推定
 		std::vector<cv::Point2f> subpix_corners;
-		for (int i = 0; i < points.size(); i++) {
-			double min_distance = DBL_MAX;
-			cv::Point2f min_point;
-			for (int j = 0; j < corners.size(); j++) {
-				cv::Point2f sub_point = points[i] - corners[j];
-				double distance = sqrt(pow(sub_point.x, 2) + pow(sub_point.y, 2));
-				if (distance < min_distance) { min_distance = distance; min_point = corners[j];	}//最短距離のコーナーを更新
-			}//for_j
-			subpix_corners.push_back(min_point);
-		}//for_i
-
-		//サブピクセル推定
+        this->find_most_closest_pt(corners, points, subpix_corners);
 		cv::cornerSubPix(gray_img, subpix_corners, cv::Size(11, 11), cv::Size(-1, -1),cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
 
 		//中心位置を推定
@@ -194,7 +210,22 @@ public:
 		}//for
 
 		return true;
-	}//measure
+	}//measure_ribbon_bridge
+
+
+    void find_most_closest_pt(std::vector<cv::Point2f> &source, std::vector<cv::Point2f> &target, std::vector<cv::Point2f> &result){
+        //minAreaRectで推定されたコーナーに最も近いコーナーを算出
+        for (int i = 0; i < target.size(); i++) {
+            double min_distance = DBL_MAX;
+            cv::Point2f min_point;
+            for (int j = 0; j < source.size(); j++) {
+                cv::Point2f sub_point = target[i] - source[j];
+                double distance = sqrt(pow(sub_point.x, 2) + pow(sub_point.y, 2));
+                if (distance < min_distance) { min_distance = distance; min_point = source[j];	}//最短距離のコーナーを更新
+            }
+            result.push_back(min_point);
+        }
+    }
 
 
 	void save_result_img(){
