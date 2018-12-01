@@ -1,8 +1,8 @@
 #Common paramater
-/boat_image_topic_name: "/usb_cam/image_raw"
+/boat_image_topic_name: "/camera/rgb/image_raw"
 /boat_contrl_topic_name: "/boat_measurement_contrl"
 /boat_execute_default: true
-/boat_package_name: "Ribbon-Bridge-Measurement"
+/boat_package_name: "ribbon_bridge_measurement"
 /boat_base_frame_name: "world"
 /boat_save_result_image: true
 /boat_show_result: true
