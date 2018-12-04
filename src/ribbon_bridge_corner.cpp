@@ -1,6 +1,7 @@
 #include <iostream>
 #include <time.h>
 #include <cstdlib>
+#include <stdlib.h>
 #include <sstream>
 #include <string>
 
@@ -43,6 +44,7 @@ public:
         ros::param::get("this_package_name", this_package_name);
         ros::param::get("yolo_rect_margin_px", rect_margin);
 
+        this->boat_aspect_ratio = 1.45454545;
         this->counter                = 0;
         this->sub_camera_img         = nh.subscribe(image_topic_name, 1, &RibbonBridgeMeasurement::rgbImageCallback, this);
         this->sub_yolo_bbox          = nh.subscribe(yolo_topic_name, 1, &RibbonBridgeMeasurement::yolobboxCallback, this);
@@ -66,6 +68,8 @@ public:
 
 		this->target_img = this->color_img.clone();
 		ribbon_bridge_measurement::RibbonBridges measuredBridges;//計測結果の格納用
+        measuredBridges.header.stamp = ros::Time::now();
+        measuredBridges.header.frame_id = "camera_image";
 
         for(int bbox_count = 0; bbox_count < msg.bounding_boxes.size(); bbox_count++){
             ribbon_bridge_measurement::RibbonBridge bridge_data;
@@ -103,8 +107,6 @@ public:
 
 	bool measure_ribbon_bridge(cv::Mat& target_img, cv::Rect& bridge_rect, ribbon_bridge_measurement::RibbonBridge& measured_bridge){
 
-        bool detect_flag = false;//検出下か否かのフラグ
-
 		cv::Mat bridge_img(target_img, bridge_rect);//画像のトリミング
         cv::Point2f center_pt = cv::Point2i(bridge_img.cols*0.5, bridge_img.rows*0.5);
 		cv::Mat gray_img;
@@ -130,15 +132,15 @@ public:
             if(keypoint_angle > 180){keypoint_angle -= 360;}
             //std::cout << "keypoints.angle = " << keypoint_angle << " center2key_angle = " << center2key_angle_deg << std::endl;
 
-            if(abs(keypoint_angle-center2key_angle) < 20){
+            if(std::abs(keypoint_angle-center2key_angle) < 20){
                 threshold_keypoints.push_back(keypoints[i]);
             }
-        }
+        }//for
 
         cv::Mat dstImg;
         cv::drawKeypoints(bridge_img, threshold_keypoints, dstImg, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
-        cv::imshow("Keypoints", dstImg);
-        cv::waitKey(0);
+        //cv::imshow("Keypoints", dstImg);
+        //cv::waitKey(27);
 
         //ここから組み合わせを探査していく
         std::vector<std::vector<int>> evalating_combi;
@@ -148,15 +150,15 @@ public:
 
             for(int i2 = 0; i2 < threshold_keypoints.size(); i2++){
                 float angle2 = threshold_keypoints[i2].angle;
-                bool do_next_search3 = this->is_target_angle(angle1, angle2, -90);
+                bool do_next_search3 = this->is_target_angle(angle1, angle2, -90, 10);
 
                 for(int i3 = 0; i3 < threshold_keypoints.size() && do_next_search3 == true; i3++){
                     float angle3 = threshold_keypoints[i3].angle;
-                    bool do_next_search4 = this->is_target_angle(angle1, angle3, 90);
+                    bool do_next_search4 = this->is_target_angle(angle1, angle3, 90, 10);
 
                     for(int i4 = 0; i4 < threshold_keypoints.size() && do_next_search4 == true; i4++){
                         float angle4 = threshold_keypoints[i4].angle;
-                        bool is_save_combi = this->is_target_angle(angle1, angle4, 180);
+                        bool is_save_combi = this->is_target_angle(angle1, angle4, 180, 10);
                         if(is_save_combi == true){
                             std::vector<int> temp_data;
                             temp_data.push_back(i1);
@@ -171,7 +173,7 @@ public:
                                 }
                             }
                             if(is_new_combi == true){
-                                std::cout << "new_combi = " << i1 << "," << i2 << "," << i3 << "," << i4 << std::endl;
+                                //std::cout << "new_combi = " << i1 << "," << i2 << "," << i3 << "," << i4 << std::endl;
                                 evalating_combi.push_back(temp_data);
                             }
                         }//if
@@ -181,6 +183,8 @@ public:
         }//for_i1
 
         //ここから組み合わせを試していく
+        double best_aspect_ratio_gap = DBL_MAX;
+        std::vector<cv::Point2f> best_subpix_corners;
         for(int num = 0; num < evalating_combi.size(); num++){
 
             std::vector<cv::Point2i> selected_corners;
@@ -193,62 +197,44 @@ public:
             rc.points(vertexes);
             std::vector<cv::Point2f> points(vertexes, vertexes + 4);
 
-            /*
-            cv::Mat test_result_img = bridge_img.clone();
-            cv::line(test_result_img, points[0], points[1], cv::Scalar(0, 255, 0), 3, CV_AA);//矩形の描画
-			cv::line(test_result_img, points[1], points[2], cv::Scalar(0, 255, 0), 3, CV_AA);
-			cv::line(test_result_img, points[2], points[3], cv::Scalar(0, 255, 0), 3, CV_AA);
-			cv::line(test_result_img, points[3], points[0], cv::Scalar(0, 255, 0), 3, CV_AA);
-            cv::imshow("eval_image", test_result_img);
-            cv::waitKey(0);
-            */
+            //コーナー角度の計算
+            bool is_corner_correct = this->check_is_corner_correct(points);
+            if(is_corner_correct == false){ continue; }
 
             //minAreaRectで推定されたコーナーを基に浮橋の位置を推定
             std::vector<cv::Point2f> subpix_corners;
             this->find_most_closest_pt(corners, points, subpix_corners);
             cv::cornerSubPix(gray_img, subpix_corners, cv::Size(11, 11), cv::Size(-1, -1),cv::TermCriteria(CV_TERMCRIT_EPS + CV_TERMCRIT_ITER, 30, 0.1));
 
-            //中心位置を推定
-            cv::Point2f center;
-            double a1 = (subpix_corners[2].y - subpix_corners[0].y) / (subpix_corners[2].x - subpix_corners[0].x);
-            double a2 = (subpix_corners[3].y - subpix_corners[1].y) / (subpix_corners[3].x - subpix_corners[1].x);
-            center.x = (a1 * subpix_corners[0].x - subpix_corners[0].y - a2 * subpix_corners[1].x + subpix_corners[1].y) / (a1 - a2);
-            center.y = (subpix_corners[2].y - subpix_corners[0].y) / (subpix_corners[2].x - subpix_corners[0].x)*(center.x - subpix_corners[0].x) + subpix_corners[0].y;
+            //アスペクト比の計算
+            double aspect_ratio = this->calc_aspect_ratio(subpix_corners);
+            double aspect_ratio_gap = std::abs(this->boat_aspect_ratio - aspect_ratio);
 
-            //angleの計測
-            double len_03 = sqrt(pow((subpix_corners[3] - subpix_corners[0]).x, 2) + pow((subpix_corners[3] - subpix_corners[0]).y, 2));
-            double len_01 = sqrt(pow((subpix_corners[1] - subpix_corners[0]).x, 2) + pow((subpix_corners[1] - subpix_corners[0]).y, 2));
-
-            /*
-            cv::Point2f weight_center;
-            weight_center = (subpix_corners[0]+subpix_corners[1]+subpix_corners[2]+subpix_corners[3]) / 4;
-
-            double distance = sqrt(pow(weight_center.x-center.x,2)+pow(weight_center.y-center.y,2));
-            if(distance > 10){
-                continue;
+            if(aspect_ratio_gap < best_aspect_ratio_gap){
+                best_aspect_ratio_gap = aspect_ratio_gap;
+                best_subpix_corners.clear();
+                copy(subpix_corners.begin(), subpix_corners.end(), back_inserter(best_subpix_corners));
             }
-            */
-
-            double ratio = std::max(len_03,len_01)/std::min(len_03,len_01);
-            //std::cout << "ratio = " << ratio << std::endl;
-            if(ratio > (1.45454545 + 0.1)){continue;}
-
-
-            //計測結果の格納
-            measured_bridge.center.x = center.x;// + bridge_rect.x;
-            measured_bridge.center.y = center.y;// + bridge_rect.y;
-            for(int i = 0; i < 4; i++){
-                geometry_msgs::Pose2D corner_pt;
-                corner_pt.x = subpix_corners[i].x + bridge_rect.x;
-                corner_pt.y = subpix_corners[i].y + bridge_rect.y;
-                measured_bridge.corners.push_back(corner_pt);
-            }//for
-            detect_flag = true;
 
         }//for_corner_num
 
-        if(detect_flag == false){return false;}
-        else{return true;}
+        if(best_aspect_ratio_gap > 0.15){ return false; }
+
+        //中心位置を推定
+        cv::Point2f bridge_center_pt = this->calc_bridge_center_pt(best_subpix_corners);
+        double bridge_angle = this->calc_bridge_angle(best_subpix_corners);
+
+        //計測結果の格納
+        measured_bridge.center.x = bridge_center_pt.x + bridge_rect.x;
+        measured_bridge.center.y = bridge_center_pt.y + bridge_rect.y;
+        for(int i = 0; i < 4; i++){
+            geometry_msgs::Pose2D corner_pt;
+            corner_pt.x = best_subpix_corners[i].x + bridge_rect.x;
+            corner_pt.y = best_subpix_corners[i].y + bridge_rect.y;
+            measured_bridge.corners.push_back(corner_pt);
+        }//for
+
+        return true;
 	}//measure_ribbon_bridge
 
 
@@ -265,6 +251,66 @@ public:
             result.push_back(min_point);
         }
     }
+
+
+    cv::Point2f calc_bridge_center_pt(std::vector<cv::Point2f> &corners){
+        double a1 = (corners[2].y - corners[0].y) / (corners[2].x - corners[0].x);
+        double a2 = (corners[3].y - corners[1].y) / (corners[3].x - corners[1].x);
+        cv::Point2f center;
+        center.x = (a1 * corners[0].x - corners[0].y - a2 * corners[1].x + corners[1].y) / (a1 - a2);
+        center.y = (corners[2].y - corners[0].y) / (corners[2].x - corners[0].x)*(center.x - corners[0].x) + corners[0].y;
+        return center;
+    }
+
+
+    double calc_bridge_angle(std::vector<cv::Point2f> &corners){
+        double angle1 = this->calc_angle(corners[0],corners[1]);
+        double angle2 = this->calc_angle(corners[3],corners[2]);
+
+        //std::cout << "bridge_angle = " << angle1 << ",  " << angle2 << std::endl;
+        return (angle1 + angle2) / 2;
+    }
+
+
+    double calc_aspect_ratio(std::vector<cv::Point2f> &corners){
+        double len_0 = sqrt(pow((corners[1]-corners[0]).x,2) + pow((corners[1]-corners[0]).y,2));
+        double len_1 = sqrt(pow((corners[2]-corners[1]).x,2) + pow((corners[2]-corners[1]).y,2));
+        double len_2 = sqrt(pow((corners[3]-corners[2]).x,2) + pow((corners[3]-corners[2]).y,2));
+        double len_3 = sqrt(pow((corners[0]-corners[3]).x,2) + pow((corners[0]-corners[3]).y,2));
+        double ratio0 = std::max(len_0,len_1)/std::min(len_0,len_1);
+        double ratio1 = std::max(len_1,len_2)/std::min(len_1,len_2);
+        double ratio2 = std::max(len_2,len_3)/std::min(len_2,len_3);
+        double ratio3 = std::max(len_3,len_0)/std::min(len_3,len_0);
+        return (ratio0+ratio1+ratio2+ratio3)/4;
+    }
+
+
+    bool check_is_corner_correct(std::vector<cv::Point2f> &corners){
+        bool corner_0 = this->is_angle_90deg(this->calc_angle(corners[0],corners[1]),this->calc_angle(corners[0],corners[3]),3);
+        bool corner_1 = this->is_angle_90deg(this->calc_angle(corners[1],corners[0]),this->calc_angle(corners[1],corners[2]),3);
+        bool corner_2 = this->is_angle_90deg(this->calc_angle(corners[2],corners[1]),this->calc_angle(corners[2],corners[3]),3);
+        bool corner_3 = this->is_angle_90deg(this->calc_angle(corners[3],corners[0]),this->calc_angle(corners[3],corners[2]),3);
+
+        if(corner_0 && corner_1 && corner_2 && corner_3){ return true; }
+        else{ return false; }
+    }//check_is_corner_correct
+
+
+    double calc_angle(cv::Point2f source_point, cv::Point2f target_point){
+        cv::Point2f sub_point = (target_point - source_point);
+        float angle = atan2(sub_point.y,sub_point.x) * 180.0 / PI;
+        if(angle < 0){ angle += 360; }
+        return angle;
+    }
+
+
+    bool is_angle_90deg(float angle1, float angle2, float threshold_deg){
+        float gap_deg = abs(angle1 - angle2);
+        if(gap_deg > 180){ gap_deg -= 180; }
+        if((90-threshold_deg) < gap_deg && gap_deg < (90+threshold_deg)){ return true; }
+        else{ return false; }
+    }
+
 
     void detect_orb_from_gray_img(cv::Mat image, std::vector<cv::Point2f> &corners, std::vector<cv::KeyPoint> &dst_keypoints){
         std::vector<cv::KeyPoint> keypoints;
@@ -293,17 +339,16 @@ public:
         }
         cv::Point2i center_pt = cv::Point2i(image.cols*0.5, image.rows*0.5);
         cv::circle(image, cv::Point(center_pt.x, center_pt.y), 8, cv::Scalar(0, 0, 255));
-        cv::imshow("corners_image", image);
-        cv::waitKey(27);
+        //cv::imshow("corners_image", image);
+        //cv::waitKey(27);
     }
 
 
-    bool is_target_angle(float source_deg, float evalate_deg, int gap_deg){
+    bool is_target_angle(float source_deg, float evalate_deg, int gap_deg, float threshold_deg){
         int target_deg = source_deg + gap_deg;
         if(target_deg > 360){target_deg -= 360;}
         else if(target_deg < 0){target_deg += 360;}
 
-        int threshold_deg = 5;
         int target_max = target_deg + threshold_deg;
         int target_min = target_deg - threshold_deg;
 
@@ -349,8 +394,8 @@ public:
 
 
     void show_result_image(){
-        cv::imshow("Ribbon_Bridge_Corner_Result", this->result_img);
-        cv::waitKey(27);
+        //cv::imshow("Ribbon_Bridge_Corner_Result", this->result_img);
+        //cv::waitKey(27);
     }//show_result_image
 
 
