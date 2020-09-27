@@ -1,0 +1,20 @@
+<launch>
+   <!-- launch video stream -->
+   <include file="$(find video_stream_opencv)/launch/camera.launch" >
+   		<arg name="camera_name" value="camera" />
+	  	<arg name="video_stream_provider" value="/home/rg26/Desktop/run.mp4" />
+	  	<arg name="fps" value="30" />
+	  	<arg name="frame_id" value="camera_frame" />
+        <arg name="camera_info_url" value="" />
+	  	<arg name="flip_horizontal" value="false" />
+        <arg name="flip_vertical" value="false" />
+	  	<arg name="visualize" value="false" />
+	<arg name="loop_videofile" value="true" />
+
+        <arg name="width" value="640"/>
+        <arg name="height" value="480"/>
+   </include>
+
+	<remap from="/camera/image_raw" to="/camera/rgb/image_raw"/>	
+
+</launch>

@@ -1,0 +1,11 @@
+<!--RoboCup 2017 Object Detect-->
+<launch>
+
+	<!-- Ribbon-Bridge-Measurement -->
+	<node pkg="ribbon_bridge_measurement" type="ribbon_bridge_lsd_node" name="ribbon_bridge_lsd_node" output="screen">
+		<rosparam command="load" file="$(find ribbon_bridge_measurement)/config/paramater_gazebo.yaml"/>
+	</node>
+
+	<!--node name="dummy_bbox_maker_gazebo" pkg="ribbon_bridge_measurement" type="dummy_bbox_maker_gazebo.py" /-->
+
+</launch>

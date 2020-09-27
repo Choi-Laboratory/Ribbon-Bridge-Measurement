@@ -202,6 +202,10 @@ public:
                     double len_vertex_12 = sqrt(pow(vertexes[1].x - vertexes[2].x, 2) + pow(vertexes[1].y - vertexes[2].y, 2));
                     double aspect_vertex_bbox = std::max(len_vertex_01, len_vertex_12) / std::min(len_vertex_01, len_vertex_12);//検出された矩形のアスペクト比
                     double rate_aspect = std::min(boat_aspect_ratio, aspect_vertex_bbox) / std::max(boat_aspect_ratio, aspect_vertex_bbox);
+
+                    //
+                    printf("aspect_vertex_bbox:[%f]\n", aspect_vertex_bbox);
+                    //
                     vertex_array.push_back(temp_points);
                     pair_rate.push_back(rate_aspect);
 
@@ -314,7 +318,7 @@ public:
             //検出した線分をすべて表示
             for(int i = 0; i < detected_lines.size(); i++){
                 for(int j = 0; j < detected_lines[i].size(); j++){
-                    //cv::line(result_image, detected_lines[i][j].getStartPoint() + detected_lines_startpt[i], detected_lines[i][j].getEndPoint() + detected_lines_startpt[i], cv::Scalar(255,0,0), 1, cv::LINE_AA);
+                    cv::line(result_image, detected_lines[i][j].getStartPoint() + detected_lines_startpt[i], detected_lines[i][j].getEndPoint() + detected_lines_startpt[i], cv::Scalar(255,0,0), 1, cv::LINE_AA);
                 }//for
             }//for
 

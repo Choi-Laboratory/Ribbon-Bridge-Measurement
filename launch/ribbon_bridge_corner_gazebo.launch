@@ -1,0 +1,30 @@
+<!--RoboCup 2017 Object Detect-->
+<launch>
+
+	<group ns = "ribbon_bridge_measurement">
+
+		<param name="show_result_img_flag" type="bool" value="false"/>
+		<param name="execute_default_flag" type="bool" value="true"/>
+		<param name="pub_result_img_flag" type="bool" value="true"/>
+		<param name="save_result_img_flag" type="bool" value="true"/>
+
+		<param name="sub_ctrl_topic_name" type="str" value="ctrl"/>
+        	<!-- param name="sub_image_topic_name" type="str" value="/gazebo/resized_img"/ -->
+		<param name="sub_image_topic_name" type="str" value="/aerial_camera/camera1/image_raw"/>
+		<param name="sub_yolo_topic_name" type="str" value="/darknet_ros/bounding_boxes"/>
+		<!--param name="sub_yolo_topic_name" type="str" value="/darknet_dnn/objects_rect"/-->
+
+        <param name="this_package_name" type="str" value="ribbon_bridge_measurement"/>
+		<param name="yolo_prob_threshold" type="double" value="0.10"/>
+        <param name="yolo_rect_margin_px" type="int" value="30"/>
+
+		<param name="ribbon_bridge_aspect_ratio" type="double" value="0.67"/>
+
+		<!-- Ribbon-Bridge-Measurement -->
+		<node pkg="ribbon_bridge_measurement" type="ribbon_bridge_corner_node" name="ribbon_bridge_corner_node" output="screen"/>
+
+	</group>
+
+	<!-- node name="dummy_bbox_maker_gazebo" pkg="ribbon_bridge_measurement" type="dummy_bbox_maker_gazebo.py" / -->
+
+</launch>

@@ -2,6 +2,8 @@
 
     <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ribbon_bridge_measurement)/rviz/rviz_config.rviz" />
 
-    <include file="$(find ribbon_bridge_measurement)/launch/ribbon_bridge_lsd.launch"/>
+    
+
+    <include file="$(find ribbon_bridge_measurement)/launch/ribbon_bridge_corner_gazebo.launch"/>
 
 </launch>
