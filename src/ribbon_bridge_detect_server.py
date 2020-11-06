@@ -12,6 +12,14 @@ from ribbon_bridge_measurement.srv import DetectRibbonBridges, DetectRibbonBridg
 """
 浮体の個数を送ると、YOLOの検出結果を返すservice
 このノードの裏で、darknet_ros ribbon_bridge_sim.launchを動かす必要があります。
+検出結果をそのまま追跡領域としてpublishします
+
+input: 
+    - 検出したい浮き橋の数
+
+output:
+    - 検出したい浮き橋の数と実際の検出数が一致しているかどうか
+    - 追跡領域の配列
 """
 
 class RibbonBridgeDetectServer():
@@ -79,6 +87,8 @@ class RibbonBridgeDetectServer():
                 region_of_interest.boundingBox.width = bounding_box.xmax - bounding_box.xmin
                 region_of_interest.boundingBox.height = bounding_box.ymax - bounding_box.ymin
                 res.region_of_interests.append(region_of_interest)
+
+                self.region_of_interest_publisher.publish(region_of_interest)
 
         rospy.loginfo("[RibbonBridgeDetectServer] Server responses client")
         return res
