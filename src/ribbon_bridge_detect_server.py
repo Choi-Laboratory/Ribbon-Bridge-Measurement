@@ -88,6 +88,7 @@ class RibbonBridgeDetectServer():
                 region_of_interest.boundingBox.height = bounding_box.ymax - bounding_box.ymin
                 res.region_of_interests.append(region_of_interest)
 
+                #検出した領域を追跡ノードにpublish
                 self.region_of_interest_publisher.publish(region_of_interest)
 
         rospy.loginfo("[RibbonBridgeDetectServer] Server responses client")
