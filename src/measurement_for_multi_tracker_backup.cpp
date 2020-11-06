@@ -21,9 +21,10 @@
 #include "image_transport/image_transport.h"
 #include "darknet_dnn/BoundingBox.h"
 #include "darknet_dnn/BoundingBoxes.h"
-#include "multi_tracker_ros/RegionOfInterests.h"
-#include "multi_tracker_ros/TrackingResult.h"
-#include "multi_tracker_ros/TrackingResults.h"
+#include "multi_tracker_ros_msgs/RegionOfInterest.h"
+#include "multi_tracker_ros_msgs/RegionOfInterests.h"
+#include "multi_tracker_ros_msgs/TrackingResult.h"
+#include "multi_tracker_ros_msgd/TrackingResults.h"
 #include "ribbon_bridge_measurement/RibbonBridge.h"
 #include "ribbon_bridge_measurement/RibbonBridges.h"
 #include "geometry_msgs/Pose2D.h"
@@ -49,7 +50,7 @@ class MeasurementForMultiTracker{
     //image_transport::Publisher result_img_publisher_;
 
     //subscribeしたtracking_results
-    //multi_tracker_ros::TrackingResults tracking_results_;
+    //multi_tracker_ros_msgs::TrackingResults tracking_results_;
     darknet_dnn::BoundingBoxes tracking_results_;
 
     //
@@ -100,7 +101,7 @@ class MeasurementForMultiTracker{
       }//catch
     }//sub_img_Callback
 
-    //void sub_tracking_result_Callback(const multi_tracker_ros::TrackingResults& msg)
+    //void sub_tracking_result_Callback(const multi_tracker_ros_msgs::TrackingResults& msg)
     void sub_tracking_result_Callback(const darknet_dnn::BoundingBoxes& msg)
     {
       tracking_results_ = msg;
@@ -113,7 +114,7 @@ class MeasurementForMultiTracker{
       ribbon_bridge_measurement::RibbonBridges measure_results;
 
       for( int i = 0; i < bridge_num; i++ ){
-        //multi_tracker_ros::TrackingResult tracking_result = tracking_results_.tracking_results[i];
+        //multi_tracker_ros_msgs::TrackingResult tracking_result = tracking_results_.tracking_results[i];
         darknet_dnn::BoundingBox tracking_result = tracking_results_.boundingBoxes[i];
 
         //std::string bridge_ID = tracking_result.boundingBox.Class;//浮橋のIDを取得

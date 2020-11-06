@@ -6,14 +6,15 @@
 #include "ros/ros.h"
 #include "darknet_dnn/BoundingBox.h"
 #include "darknet_dnn/BoundingBoxes.h"
-#include "multi_tracker_ros/RegionOfInterests.h"
-#include "multi_tracker_ros/TrackingResult.h"
-#include "multi_tracker_ros/TrackingResults.h"
+#include "multi_tracker_ros_msgs/RegionOfInterest.h"
+#include "multi_tracker_ros_msgs/RegionOfInterests.h"
+#include "multi_tracker_ros_msgs/TrackingResult.h"
+#include "multi_tracker_ros_msgs/TrackingResults.h"
 #include "ribbon_bridge_measurement/RibbonBridge.h"
 #include "ribbon_bridge_measurement/RibbonBridges.h"
 #include "geometry_msgs/Pose2D.h"
 
-ros::Publisher regions_of_interests_publisher;
+ros::Publisher regions_of_interest_publisher;
 
 darknet_dnn::BoundingBoxes g_tracking_results;
 
@@ -37,7 +38,7 @@ void callbackMeasurementResults(const ribbon_bridge_measurement::RibbonBridges& 
         //std::cout << distance << std::endl;
 
         if( 5.0 < distance && distance < 20.0 ){
-          multi_tracker_ros::RegionOfInterests roi;
+          multi_tracker_ros_msgs::RegionOfInterest roi;
           roi.ID = boat_id;
           /*roi.boundingBox.x = int(msg.RibbonBridges[i].center.x - 75);
           roi.boundingBox.y = int(msg.RibbonBridges[i].center.y - 75);
@@ -48,7 +49,7 @@ void callbackMeasurementResults(const ribbon_bridge_measurement::RibbonBridges& 
           roi.boundingBox.y = int(msg.RibbonBridges[i].center.y - 100);
           roi.boundingBox.width = 200;
           roi.boundingBox.height = 200;
-          regions_of_interests_publisher.publish(roi);
+          regions_of_interest_publisher.publish(roi);
           std::cout << "Update ROI of " << boat_id << std::endl;
         }
 
@@ -64,7 +65,7 @@ int main(int argc, char** argv){
 
   ros::NodeHandle nh;
 
-  regions_of_interests_publisher = nh.advertise<multi_tracker_ros::RegionOfInterests>("multi_tracker_ros/RegionOfInterests", 1);
+  regions_of_interest_publisher = nh.advertise<multi_tracker_ros_msgs::RegionOfInterest>("multi_tracker_ros/RegionOfInterest", 1);
 
   ros::Subscriber tracking_results_subscriber = nh.subscribe("/multi_tracker_ros/tracking_results", 10, callbackTrackingResults);
 
