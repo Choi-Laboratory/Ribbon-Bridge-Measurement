@@ -15,7 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   geometry_msgs
   darknet_ros_msgs
-  multi_tracker_ros
+  #multi_tracker_ros
 )
 
 add_message_files(
@@ -24,10 +24,16 @@ add_message_files(
     RibbonBridges.msg
 )
 
+add_service_files(
+    FILES
+    DetectRibbonBridges.srv
+)
+
 generate_messages(
     DEPENDENCIES
     std_msgs
     geometry_msgs
+    multi_tracker_ros_msgs
 )
 
 catkin_package(

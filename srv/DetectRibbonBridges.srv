@@ -1,0 +1,4 @@
+int8 ribbon_bridges_num
+---
+bool is_find_all_ribbon_bridges
+multi_tracker_ros_msgs/RegionOfInterest[] region_of_interests
