@@ -111,14 +111,15 @@ class MeasurementForMultiTracker{
       
       ribbon_bridge_measurement::RibbonBridges measure_results; //計測結果の配列
 
-      std::cout << "==============\n";
+      //std::cout << "==============\n";
+      std::string outputs; 
+      outputs = "\nMeasurement Results\n\n";
 
       for( int i = 0; i < bridge_num; i++ ){
         multi_tracker_ros_msgs::TrackingResult tracking_result = tracking_results_.tracking_results[i];
         ribbon_bridge_measurement::RibbonBridge measure_result;
         
         std::string bridge_ID = tracking_result.boundingBox.header.frame_id;//浮橋のIDを取得
-        //measure_result.boat_id = std::stoi(bridge_ID);
         measure_result.boat_id = tracking_result.boundingBox.label;
 
         if( tracking_result.boundingBox.dimensions.x == 0 && tracking_result.boundingBox.dimensions.y == 0){
@@ -140,9 +141,9 @@ class MeasurementForMultiTracker{
             bin_img = ~bin_img;
 
             //二値化した画像の描画（デバッグ用）
-            std::string window_name = bridge_ID + "_bin";
-            cv::imshow(window_name, bin_img);
-            cv::waitKey(1);
+            //std::string window_name = bridge_ID + "_bin";
+            //cv::imshow(window_name, bin_img);
+            //cv::waitKey(1);
 
             //輪郭検出
             std::vector<std::vector<cv::Point>> contours;
@@ -169,8 +170,6 @@ class MeasurementForMultiTracker{
                   //  std::cout << "area_size : " << area << std::endl;
                   //  continue;
                   //}
-
-
 
                   //輪郭を直線近似する
                   std::vector<cv::Point> approx;
@@ -336,9 +335,10 @@ class MeasurementForMultiTracker{
                     degree = theta * 180.0 / PI;
                     if( abs(90.0-degree) > angle_threshold ){
                       //ROS_WARN("ID:[%d] The angle exceeds the threshold.", std::stoi(bridge_ID));
-                      ROS_ERROR("ID:[%d] The angle exceeds the threshold.", std::stoi(bridge_ID));
-                      std::cout << "degree:" << degree << std::endl;
-                      //continue;
+                      //ROS_ERROR("ID:[%d] The angle exceeds the threshold.", std::stoi(bridge_ID));
+                      //std::cout << "degree:" << degree << std::endl;
+                      outputs += "\n\033[33m ID:[" + tracking_result.boundingBox.header.frame_id + "] The Angle Exceeds THRESHOLD \n\033[0m"; 
+                      continue;
                     }
 
                   }//end if
@@ -372,9 +372,11 @@ class MeasurementForMultiTracker{
 
                   double judge = boat_aspect_ratio_ / result_aspect_ratio;
                   if( judge < 0.85 || 1.15 < judge ){
-                    std::cout << "result_aspect_ratio:" << result_aspect_ratio << std::endl;
-                    std::cout << "correct_aspect_ratio:" << boat_aspect_ratio_ << std::endl;
-                    ROS_ERROR("ID:[%d] The aspect_ratio exceeds the threshold.", std::stoi(bridge_ID));
+                    //std::cout << "result_aspect_ratio:" << result_aspect_ratio << std::endl;
+                    //std::cout << "correct_aspect_ratio:" << boat_aspect_ratio_ << std::endl;
+                    //ROS_ERROR("ID:[%d] The aspect_ratio exceeds the threshold.", std::stoi(bridge_ID));
+                    outputs += "\n\033[33m ID:[" + tracking_result.boundingBox.header.frame_id + "] The Aspect Ration Exceeds THRESHOLD \n\033[0m"; 
+                    
                     continue;
                   }
 
@@ -386,6 +388,11 @@ class MeasurementForMultiTracker{
 
                   //中心の描画
                   cv::circle(trim_img, center, 5, cv::Scalar(255, 0, 255), -1);
+
+                  //IDの描画
+                  char char_id[10];
+                  sprintf(char_id, "%d", tracking_result.boundingBox.label);
+                  cv::putText(trim_img, char_id, cv::Point(center.x, center.y), cv::FONT_HERSHEY_SIMPLEX, 3, cv::Scalar(255,255,255), 5, CV_AA);
 
                   //浮体の傾きを描画
                   double len_0_to_1 = sqrt(pow(result_corners[1].x-result_corners[0].x,2) + pow(result_corners[1].y-result_corners[0].y,2));
@@ -410,11 +417,15 @@ class MeasurementForMultiTracker{
                   center.x = center.x + tracking_result.boundingBox.pose.position.x;
                   center.y = center.y + tracking_result.boundingBox.pose.position.y;
 
-                  std::cout << "ID:" << bridge_ID << "\n";
-                  std::cout << "center:" << center << "\n";
-                  std::cout << "degree:" << 90.0+result_deg << "\n";
+                  //std::cout << "ID:" << bridge_ID << "\n";
+                  //std::cout << "center:" << center << "\n";
+                  //std::cout << "degree:" << 90.0+result_deg << "\n";
                   //std::cout << "radian:" << result_rad << "\n";
-                  std::cout << "---\n";
+                  //std::cout << "---\n";
+                  outputs += " ID:[" + tracking_result.boundingBox.header.frame_id + "] ";
+                  outputs += "center:[" + std::to_string((int)center.x)  + ", " + std::to_string((int)center.y) + "] ";
+                  outputs += "degree:[" + std::to_string(degree) + "] ";
+                  outputs += "\n";
 
                   //計測結果を格納
                   measure_result.center.x = center.x;
@@ -433,6 +444,10 @@ class MeasurementForMultiTracker{
                 }//end else
               }// end else
             }// end for i
+
+            printf("\033[2J");
+            printf("\033[1;1H");
+            printf("\n%s\n", outputs.c_str());
 
             //計測結果をpublish
             if( measure_results.RibbonBridges.size() != 0 ){
@@ -453,7 +468,7 @@ class MeasurementForMultiTracker{
         }//end try triming
 
         catch(...){
-          ROS_WARN("Faild to trim");
+          //ROS_WARN("Faild to trim");
           return;
         }// end catch triming
 
