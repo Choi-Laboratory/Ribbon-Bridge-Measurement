@@ -5,7 +5,7 @@ import rospy, rosparam
 from std_msgs.msg import String
 from jsk_recognition_msgs.msg import BoundingBox
 from darknet_ros_msgs.msg import BoundingBoxes as darknet_ros_BoundingBoxes
-from multi_tracker_ros_msgs.msg import RegionOfInterest
+from multi_tracker_ros_msgs.msg import RegionOfInterest, RegionOfInterests
 from ribbon_bridge_measurement.srv import DetectRibbonBridges, DetectRibbonBridgesResponse 
 
 
@@ -29,6 +29,7 @@ class RibbonBridgeDetectServer():
         #Publishers
         self.object_detection_control_publisher = rospy.Publisher("/darknet_ros/detection_control", String, queue_size=1, latch=True)
         self.region_of_interest_publisher = rospy.Publisher("/multi_tracker_ros/region_of_interest", RegionOfInterest, queue_size=10, latch=False)
+        self.region_of_interests_publisher = rospy.Publisher("/multi_tracker_ros/region_of_interests", RegionOfInterests, queue_size=10, latch=False)
 
         #Subscribers
         self.object_detection_subscriber = rospy.Subscriber("/darknet_ros/bounding_boxes", darknet_ros_BoundingBoxes, self.object_detection_subscriber_callback)
@@ -84,15 +85,19 @@ class RibbonBridgeDetectServer():
                 region_of_interest.boundingBox.header.frame_id = str(i)
                 region_of_interest.boundingBox.label = i
                 region_of_interest.boundingBox.value = bounding_box.probability
-                region_of_interest.boundingBox.pose.position.x = bounding_box.xmin
-                region_of_interest.boundingBox.pose.position.y = bounding_box.ymin
-                region_of_interest.boundingBox.dimensions.x = bounding_box.xmax - bounding_box.xmin
-                region_of_interest.boundingBox.dimensions.y = bounding_box.ymax - bounding_box.ymin           
-                
+                region_of_interest.boundingBox.pose.position.x = bounding_box.xmin - 10
+                region_of_interest.boundingBox.pose.position.y = bounding_box.ymin - 10
+                region_of_interest.boundingBox.dimensions.x = bounding_box.xmax - bounding_box.xmin + 10
+                region_of_interest.boundingBox.dimensions.y = bounding_box.ymax - bounding_box.ymin + 10      
+
                 res.region_of_interests.append(region_of_interest)
 
                 #検出した領域を追跡ノードにpublish
                 self.region_of_interest_publisher.publish(region_of_interest)
+
+        #region_of_interests = RegionOfInterests()
+        #region_of_interests.region_of_interests = res.region_of_interests
+        #self.region_of_interests_publisher.publish(region_of_interests)
 
         rospy.loginfo("[RibbonBridgeDetectServer] Server responses client")
         return res

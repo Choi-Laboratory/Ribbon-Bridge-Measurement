@@ -118,8 +118,8 @@ class MeasurementForMultiTracker{
         ribbon_bridge_measurement::RibbonBridge measure_result;
         
         std::string bridge_ID = tracking_result.boundingBox.header.frame_id;//浮橋のIDを取得
-        
-        measure_result.boat_id = std::stoi(bridge_ID);
+        //measure_result.boat_id = std::stoi(bridge_ID);
+        measure_result.boat_id = tracking_result.boundingBox.label;
 
         if( tracking_result.boundingBox.dimensions.x == 0 && tracking_result.boundingBox.dimensions.y == 0){
           continue;
