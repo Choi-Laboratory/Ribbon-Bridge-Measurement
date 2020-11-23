@@ -44,6 +44,9 @@ class RibbonBridgeDetectServer():
         #serverの起動
         rospy.Service("/ribbon_bridge_detect_server", DetectRibbonBridges, self.service_callback)
 
+        #YOLOの結果より広めの領域を設定したい場合のマージン
+        self.margin = 30 #pixel
+
 
 
     def service_callback(self, srv):
@@ -85,10 +88,10 @@ class RibbonBridgeDetectServer():
                 region_of_interest.boundingBox.header.frame_id = str(i)
                 region_of_interest.boundingBox.label = i
                 region_of_interest.boundingBox.value = bounding_box.probability
-                region_of_interest.boundingBox.pose.position.x = bounding_box.xmin - 10
-                region_of_interest.boundingBox.pose.position.y = bounding_box.ymin - 10
-                region_of_interest.boundingBox.dimensions.x = bounding_box.xmax - bounding_box.xmin + 10
-                region_of_interest.boundingBox.dimensions.y = bounding_box.ymax - bounding_box.ymin + 10      
+                region_of_interest.boundingBox.pose.position.x = bounding_box.xmin - self.margin
+                region_of_interest.boundingBox.pose.position.y = bounding_box.ymin - self.margin
+                region_of_interest.boundingBox.dimensions.x = bounding_box.xmax - bounding_box.xmin + self.margin*2
+                region_of_interest.boundingBox.dimensions.y = bounding_box.ymax - bounding_box.ymin + self.margin*2
 
                 res.region_of_interests.append(region_of_interest)
 
