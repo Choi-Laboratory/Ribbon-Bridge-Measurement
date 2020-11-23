@@ -19,8 +19,7 @@
 #include "std_msgs/Bool.h"
 #include "std_msgs/Float32.h"
 #include "image_transport/image_transport.h"
-#include "darknet_dnn/BoundingBox.h"
-#include "darknet_dnn/BoundingBoxes.h"
+#include "jsk_recognition_msgs/BoundingBox.h"
 #include "multi_tracker_ros_msgs/RegionOfInterest.h"
 #include "multi_tracker_ros_msgs/RegionOfInterests.h"
 #include "multi_tracker_ros_msgs/TrackingResult.h"
@@ -50,8 +49,7 @@ class MeasurementForMultiTracker{
     //image_transport::Publisher result_img_publisher_;
 
     //subscribeしたtracking_results
-    //multi_tracker_ros_msgs::TrackingResults tracking_results_;
-    darknet_dnn::BoundingBoxes tracking_results_;
+    multi_tracker_ros_msgs::TrackingResults tracking_results_;
 
     //
     cv_bridge::CvImagePtr cv_ptr_;
@@ -101,8 +99,7 @@ class MeasurementForMultiTracker{
       }//catch
     }//sub_img_Callback
 
-    //void sub_tracking_result_Callback(const multi_tracker_ros_msgs::TrackingResults& msg)
-    void sub_tracking_result_Callback(const darknet_dnn::BoundingBoxes& msg)
+    void sub_tracking_result_Callback(const multi_tracker_ros_msgs::TrackingResults& msg)
     {
       tracking_results_ = msg;
       contours_detector();
@@ -110,31 +107,27 @@ class MeasurementForMultiTracker{
 
 
     void contours_detector(){
-      //int bridge_num = tracking_results_.tracking_results.size(); //浮橋の数
-      int bridge_num = tracking_results_.boundingBoxes.size();
-      ribbon_bridge_measurement::RibbonBridges measure_results;
+      int bridge_num = tracking_results_.tracking_results.size(); //浮橋の数
+      
+      ribbon_bridge_measurement::RibbonBridges measure_results; //計測結果の配列
 
       std::cout << "==============\n";
 
       for( int i = 0; i < bridge_num; i++ ){
-        //multi_tracker_ros_msgs::TrackingResult tracking_result = tracking_results_.tracking_results[i];
-        darknet_dnn::BoundingBox tracking_result = tracking_results_.boundingBoxes[i];
-
-        //std::string bridge_ID = tracking_result.boundingBox.Class;//浮橋のIDを取得
-        std::string bridge_ID = tracking_result.Class;
-
+        multi_tracker_ros_msgs::TrackingResult tracking_result = tracking_results_.tracking_results[i];
         ribbon_bridge_measurement::RibbonBridge measure_result;
+        
+        std::string bridge_ID = tracking_result.boundingBox.header.frame_id;//浮橋のIDを取得
+        
         measure_result.boat_id = std::stoi(bridge_ID);
 
-        if( tracking_result.width == 0 && tracking_result.height == 0){
+        if( tracking_result.boundingBox.dimensions.x == 0 && tracking_result.boundingBox.dimensions.y == 0){
           continue;
         }
 
         try{
           //画像から浮橋の領域をトリミング
-          //cv::Mat trim_img(color_img_, cv::Rect(tracking_result.boundingBox.x, tracking_result.boundingBox.y, tracking_result.boundingBox.width, tracking_result.boundingBox.height));
-          cv::Mat trim_img(color_img_, cv::Rect(tracking_result.x, tracking_result.y, tracking_result.width, tracking_result.height));
-
+          cv::Mat trim_img(color_img_, cv::Rect(tracking_result.boundingBox.pose.position.x, tracking_result.boundingBox.pose.position.y, tracking_result.boundingBox.dimensions.x, tracking_result.boundingBox.dimensions.y));
 
           try{//find contours
             cv::Mat gray_img, bin_img;
@@ -414,8 +407,8 @@ class MeasurementForMultiTracker{
                   double result_deg = result_rad * 180.0 / PI;
 
                   //画像全体における浮橋の中心位置を求める
-                  center.x = center.x + tracking_result.x;
-                  center.y = center.y + tracking_result.y;
+                  center.x = center.x + tracking_result.boundingBox.pose.position.x;
+                  center.y = center.y + tracking_result.boundingBox.pose.position.y;
 
                   std::cout << "ID:" << bridge_ID << "\n";
                   std::cout << "center:" << center << "\n";

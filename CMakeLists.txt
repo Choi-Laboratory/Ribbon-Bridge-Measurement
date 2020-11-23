@@ -15,7 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   geometry_msgs
   darknet_ros_msgs
-  #multi_tracker_ros
+  jsk_recognition_msgs
+  multi_tracker_ros_msgs
 )
 
 add_message_files(
@@ -63,22 +64,22 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
-add_executable(ribbon_bridge_lsd_node src/ribbon_bridge_lsd.cpp)
-target_link_libraries(ribbon_bridge_lsd_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
-add_dependencies(ribbon_bridge_lsd_node ${PROJECT_NAME}_generate_messages_cpp)
+#add_executable(ribbon_bridge_lsd_node src/ribbon_bridge_lsd.cpp)
+#target_link_libraries(ribbon_bridge_lsd_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
+#add_dependencies(ribbon_bridge_lsd_node ${PROJECT_NAME}_generate_messages_cpp)
 
-add_executable(ribbon_bridge_corner_node src/ribbon_bridge_corner.cpp)
-target_link_libraries(ribbon_bridge_corner_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
-add_dependencies(ribbon_bridge_corner_node ${PROJECT_NAME}_generate_messages_cpp)
+#add_executable(ribbon_bridge_corner_node src/ribbon_bridge_corner.cpp)
+#target_link_libraries(ribbon_bridge_corner_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
+#add_dependencies(ribbon_bridge_corner_node ${PROJECT_NAME}_generate_messages_cpp)
 
-add_executable(ribbon_bridge_tracker_node src/ribbon_bridge_tracker.cpp)
-target_link_libraries(ribbon_bridge_tracker_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
-add_dependencies(ribbon_bridge_tracker_node ${PROJECT_NAME}_generate_messages_cpp)
+#add_executable(ribbon_bridge_tracker_node src/ribbon_bridge_tracker.cpp)
+#target_link_libraries(ribbon_bridge_tracker_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
+#add_dependencies(ribbon_bridge_tracker_node ${PROJECT_NAME}_generate_messages_cpp)
 
 add_executable(measurement_for_multi_tracker_node src/measurement_for_multi_tracker.cpp)
 target_link_libraries(measurement_for_multi_tracker_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
 add_dependencies(measurement_for_multi_tracker_node ${PROJECT_NAME}_generate_messages_cpp)
 
-add_executable(update_regions_of_interest_node src/update_regions_of_interest.cpp)
-target_link_libraries(update_regions_of_interest_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
-add_dependencies(update_regions_of_interest_node ${PROJECT_NAME}_generate_messages_cpp)
+#add_executable(update_regions_of_interest_node src/update_regions_of_interest.cpp)
+#target_link_libraries(update_regions_of_interest_node ${OpenCV_LIBRARIES} ${catkin_LIBRARIES})
+#add_dependencies(update_regions_of_interest_node ${PROJECT_NAME}_generate_messages_cpp)
