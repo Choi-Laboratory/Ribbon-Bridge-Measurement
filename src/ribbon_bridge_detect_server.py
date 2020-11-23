@@ -3,7 +3,7 @@
 import rospy, rosparam
 
 from std_msgs.msg import String
-from darknet_dnn.msg import BoundingBox, BoundingBoxes
+from jsk_recognition_msgs.msg import BoundingBox
 from darknet_ros_msgs.msg import BoundingBoxes as darknet_ros_BoundingBoxes
 from multi_tracker_ros_msgs.msg import RegionOfInterest
 from ribbon_bridge_measurement.srv import DetectRibbonBridges, DetectRibbonBridgesResponse 
@@ -81,11 +81,14 @@ class RibbonBridgeDetectServer():
             for i, bounding_box in enumerate(bounding_boxes):
                 region_of_interest = RegionOfInterest()
                 region_of_interest.ID = i
-                region_of_interest.boundingBox.probability = bounding_box.probability
-                region_of_interest.boundingBox.x = bounding_box.xmin
-                region_of_interest.boundingBox.y = bounding_box.ymin
-                region_of_interest.boundingBox.width = bounding_box.xmax - bounding_box.xmin
-                region_of_interest.boundingBox.height = bounding_box.ymax - bounding_box.ymin
+                region_of_interest.boundingBox.header.frame_id = str(i)
+                region_of_interest.boundingBox.label = i
+                region_of_interest.boundingBox.value = bounding_box.probability
+                region_of_interest.boundingBox.pose.position.x = bounding_box.xmin
+                region_of_interest.boundingBox.pose.position.y = bounding_box.ymin
+                region_of_interest.boundingBox.dimensions.x = bounding_box.xmax - bounding_box.xmin
+                region_of_interest.boundingBox.dimensions.y = bounding_box.ymax - bounding_box.ymin           
+                
                 res.region_of_interests.append(region_of_interest)
 
                 #検出した領域を追跡ノードにpublish
