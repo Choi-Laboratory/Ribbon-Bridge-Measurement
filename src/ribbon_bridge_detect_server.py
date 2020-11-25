@@ -72,7 +72,8 @@ class RibbonBridgeDetectServer():
             
             self.object_detection_control_publisher.publish("False") #推論停止
 
-            bounding_boxes = self.bounding_boxes
+            #bounding_boxes = self.bounding_boxes
+            bounding_boxes = self.sort_boundingboxes(self.bounding_boxes)
 
             #指定した領域の個数と検出された領域の個数が一致しているか確認
             if len(bounding_boxes) == srv.ribbon_bridges_num:
@@ -96,11 +97,12 @@ class RibbonBridgeDetectServer():
                 res.region_of_interests.append(region_of_interest)
 
                 #検出した領域を追跡ノードにpublish
-                self.region_of_interest_publisher.publish(region_of_interest)
+                #self.region_of_interest_publisher.publish(region_of_interest)
 
-        #region_of_interests = RegionOfInterests()
-        #region_of_interests.region_of_interests = res.region_of_interests
-        #self.region_of_interests_publisher.publish(region_of_interests)
+        #検出した領域をまとめて追跡ノードにpublish
+        region_of_interests = RegionOfInterests()
+        region_of_interests.region_of_interests = res.region_of_interests
+        self.region_of_interests_publisher.publish(region_of_interests)
 
         rospy.loginfo("[RibbonBridgeDetectServer] Server responses client")
         return res
@@ -109,6 +111,30 @@ class RibbonBridgeDetectServer():
         self.bounding_boxes = msg.bounding_boxes
         self.is_update_bounding_boxes = True
 
+    def sort_boundingboxes(self, darknet_ros_boundingboxes):
+        """
+        boundingBoxesを左から順に並び替える
+        アルゴリズム：bubble sort
+        """
+        input_boundingboxes = darknet_ros_boundingboxes
+        sorted_boundingboxes = input_boundingboxes
+
+        while self.check_sorted(sorted_boundingboxes) == False:
+            for i in range(len(input_boundingboxes)-1):
+                if sorted_boundingboxes[i+1].xmin < sorted_boundingboxes[i].xmin:
+                    sorted_boundingboxes[i], sorted_boundingboxes[i+1] = sorted_boundingboxes[i+1], sorted_boundingboxes[i] #swap
+                    
+        return sorted_boundingboxes
+
+    def check_sorted(self, input_boundingboxes):
+        """
+        並び替えれたか確認する関数
+        """
+        for i in range(len(input_boundingboxes)-1):
+            if input_boundingboxes[i].xmin > input_boundingboxes[i+1].xmin:
+                return False #並び替え未完了
+
+        return True #並び替え完了
 
 if __name__ == "__main__":
     rospy.init_node("ribbon_bridge_detect_service", anonymous=False)
