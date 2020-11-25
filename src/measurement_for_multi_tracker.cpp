@@ -122,11 +122,11 @@ class MeasurementForMultiTracker{
         std::string bridge_ID = tracking_result.boundingBox.header.frame_id;//浮橋のIDを取得
         measure_result.boat_id = tracking_result.boundingBox.label;
 
-        if( tracking_result.boundingBox.dimensions.x == 0 && tracking_result.boundingBox.dimensions.y == 0){
+        if( tracking_result.boundingBox.dimensions.x <= 0 || tracking_result.boundingBox.dimensions.y <= 0){
           continue;
         }
 
-        try{
+        try{ //triming
           //画像から浮橋の領域をトリミング
           cv::Mat trim_img(color_img_, cv::Rect(tracking_result.boundingBox.pose.position.x, tracking_result.boundingBox.pose.position.y, tracking_result.boundingBox.dimensions.x, tracking_result.boundingBox.dimensions.y));
 
@@ -337,7 +337,7 @@ class MeasurementForMultiTracker{
                       //ROS_WARN("ID:[%d] The angle exceeds the threshold.", std::stoi(bridge_ID));
                       //ROS_ERROR("ID:[%d] The angle exceeds the threshold.", std::stoi(bridge_ID));
                       //std::cout << "degree:" << degree << std::endl;
-                      outputs += "\n\033[33m ID:[" + tracking_result.boundingBox.header.frame_id + "] The Angle Exceeds THRESHOLD \n\033[0m"; 
+                      outputs += "\033[33m ID:[" + tracking_result.boundingBox.header.frame_id + "] The Angle Exceeds THRESHOLD \n\033[0m"; 
                       continue;
                     }
 
@@ -375,7 +375,7 @@ class MeasurementForMultiTracker{
                     //std::cout << "result_aspect_ratio:" << result_aspect_ratio << std::endl;
                     //std::cout << "correct_aspect_ratio:" << boat_aspect_ratio_ << std::endl;
                     //ROS_ERROR("ID:[%d] The aspect_ratio exceeds the threshold.", std::stoi(bridge_ID));
-                    outputs += "\n\033[33m ID:[" + tracking_result.boundingBox.header.frame_id + "] The Aspect Ration Exceeds THRESHOLD \n\033[0m"; 
+                    outputs += "\033[33m ID:[" + tracking_result.boundingBox.header.frame_id + "] The Aspect Ration Exceeds THRESHOLD \n\033[0m"; 
                     
                     continue;
                   }
@@ -392,7 +392,7 @@ class MeasurementForMultiTracker{
                   //IDの描画
                   char char_id[10];
                   sprintf(char_id, "%d", tracking_result.boundingBox.label);
-                  cv::putText(trim_img, char_id, cv::Point(center.x, center.y), cv::FONT_HERSHEY_SIMPLEX, 3, cv::Scalar(255,255,255), 5, CV_AA);
+                  cv::putText(trim_img, char_id, cv::Point(center.x, center.y), cv::FONT_HERSHEY_SIMPLEX, 2, cv::Scalar(255,255,255), 3, CV_AA);
 
                   //浮体の傾きを描画
                   double len_0_to_1 = sqrt(pow(result_corners[1].x-result_corners[0].x,2) + pow(result_corners[1].y-result_corners[0].y,2));
