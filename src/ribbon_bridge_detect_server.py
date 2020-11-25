@@ -116,25 +116,26 @@ class RibbonBridgeDetectServer():
         boundingBoxesを左から順に並び替える
         アルゴリズム：bubble sort
         """
+        def check_sorted(input_boundingboxes):
+            """
+            並び替えれたか確認する内部関数
+            """
+            for i in range(len(input_boundingboxes)-1):
+                if input_boundingboxes[i].xmin > input_boundingboxes[i+1].xmin:
+                    return False
+
+            return True
+
         input_boundingboxes = darknet_ros_boundingboxes
         sorted_boundingboxes = input_boundingboxes
 
-        while self.check_sorted(sorted_boundingboxes) == False:
+        while check_sorted(sorted_boundingboxes) == False:
             for i in range(len(input_boundingboxes)-1):
                 if sorted_boundingboxes[i+1].xmin < sorted_boundingboxes[i].xmin:
                     sorted_boundingboxes[i], sorted_boundingboxes[i+1] = sorted_boundingboxes[i+1], sorted_boundingboxes[i] #swap
                     
         return sorted_boundingboxes
 
-    def check_sorted(self, input_boundingboxes):
-        """
-        並び替えれたか確認する関数
-        """
-        for i in range(len(input_boundingboxes)-1):
-            if input_boundingboxes[i].xmin > input_boundingboxes[i+1].xmin:
-                return False #並び替え未完了
-
-        return True #並び替え完了
 
 if __name__ == "__main__":
     rospy.init_node("ribbon_bridge_detect_service", anonymous=False)
