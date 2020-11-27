@@ -124,6 +124,14 @@ class MeasurementForMultiTracker{
         std::string bridge_ID = tracking_result.boundingBox.header.frame_id;//浮橋のIDを取得
         measure_result.boat_id = tracking_result.boundingBox.label;
 
+        outputs += "\n ID:[" + tracking_result.boundingBox.header.frame_id + "] ";
+
+        //計測成否のflagを定義
+        bool measured_flag = false;
+        std::string outputs_err_info;
+
+        std::string window_name; 
+
         if( tracking_result.boundingBox.dimensions.x <= 0 || tracking_result.boundingBox.dimensions.y <= 0){
           continue;
         }
@@ -164,6 +172,7 @@ class MeasurementForMultiTracker{
                
                 if( contours[i].size() < 0 ){
                   //矩形を構成するには最低4つの点が必要
+                  outputs_err_info = "You need 4 corners.";
                   continue;
                 }
 
@@ -171,6 +180,7 @@ class MeasurementForMultiTracker{
                   //面積によるしきい値処理
                   double area = cv::contourArea(contours[i], false);
                   if( area < ribbon_bridge_area_threshold_ ){
+                    outputs_err_info = "The area is not enough threshold.";
                     continue;
                   }
 
@@ -180,6 +190,7 @@ class MeasurementForMultiTracker{
 
                   //矩形以外の形状はcontinue
                   if( approx.size() != 4 ){
+                    outputs_err_info = "You need 4 corners.";
                     continue;
                   }
 
@@ -194,7 +205,6 @@ class MeasurementForMultiTracker{
                   rc.points(vertexes);
                   std::vector<cv::Point2f> points(vertexes, vertexes + 4);
 
-                  std::string window_name;
                   //トリムした画像の描画
                   //window_name = bridge_ID + "_trimmed_rect";
                   //cv::imshow(window_name, trim_img);
@@ -268,7 +278,7 @@ class MeasurementForMultiTracker{
                       second_bottom = subpix_corners[i].y;
                       second_bottom_corner = subpix_corners[i];
                     }
-                  }
+                  }//end for( int i = 0; i < 4; i++ ){
 
                   if( first_top_corner.x < second_top_corner.x ){
                     result_corners[0] = first_top_corner;
@@ -354,6 +364,10 @@ class MeasurementForMultiTracker{
                   double diagonal_0_2_length = sqrt( pow(abs(result_corners[0].x-result_corners[2].x), 2) + pow(abs(result_corners[0].y - result_corners[2].y), 2) );
                   double diagonal_1_3_length = sqrt( pow(abs(result_corners[1].x-result_corners[3].x), 2) + pow(abs(result_corners[1].y - result_corners[3].y), 2) );
                   double diagonal_aspect = diagonal_0_2_length / diagonal_1_3_length;
+                  if( diagonal_aspect < 0.95 || 1.05 < diagonal_aspect ){
+                    outputs_err_info = "The aspect ratio is beyond the threshold.";
+                    continue;
+                  }
 
 
                   /*
@@ -415,16 +429,13 @@ class MeasurementForMultiTracker{
                   center.x = center.x + tracking_result.boundingBox.pose.position.x;
                   center.y = center.y + tracking_result.boundingBox.pose.position.y;
 
-                  //std::cout << "ID:" << bridge_ID << "\n";
-                  //std::cout << "center:" << center << "\n";
-                  //std::cout << "degree:" << 90.0+result_deg << "\n";
-                  //std::cout << "radian:" << result_rad << "\n";
-                  //std::cout << "---\n";
-                  outputs += " ID:[" + tracking_result.boundingBox.header.frame_id + "] ";
+                  //計測成功のflag
+                  measured_flag = true;
+
                   outputs += "\n   - center:[" + std::to_string(center.x)  + ", " + std::to_string(center.y) + "] ";
                   outputs += "\n   - degree:[" + std::to_string(degree) + "] ";
-                  //outputs += "\n   - diagonal_aspect:[" + std::to_string(diagonal_aspect) + "] ";
-                  outputs += "\n   - area:[" + std::to_string(area) + "] ";
+                  outputs += "\n   - diagonal_aspect:[" + std::to_string(diagonal_aspect) + "] ";
+                  //outputs += "\n   - area:[" + std::to_string(area) + "] ";
                   outputs += "\n";
 
                   //計測結果を格納
@@ -442,23 +453,21 @@ class MeasurementForMultiTracker{
                   //尤もらしい浮橋が見つかったのでループを抜ける
                   break;
                 }//end else
+
               }// end else
-            }// end for i
 
-            //計測結果をコンソールに出力
-            printf("\033[2J");
-            printf("\033[1;1H");
-            printf("\n%s\n", outputs.c_str());
+            }// end for( int i = 0; i < contours.size(); i++ ){
 
-            //計測結果をpublish
-            if( measure_results.RibbonBridges.size() != 0 ){
-              measure_result_publisher_.publish(measure_results);
+            //すべての輪郭を試しても計測に失敗してしまった場合
+            if( measured_flag == false ){
+              outputs += "\n\033[33m   " + outputs_err_info + "\n\033[0m \n\n"; 
             }
 
           }//end try find contours
 
           catch(...){
-            ROS_WARN("error");
+            //ROS_WARN("error");
+            outputs_err_info = "some error has occured.";
           }//end catch
 
           //trimした浮橋の画像の描画
@@ -470,10 +479,21 @@ class MeasurementForMultiTracker{
 
         catch(...){
           //ROS_WARN("Faild to trim");
-          return;
+          outputs_err_info = "failed to trimming.";
+          //return;
         }// end catch triming
 
-      }//end for
+      }//end for( int i = 0; i < bridge_num; i++ )
+
+      //計測結果をpublish
+      if( measure_results.RibbonBridges.size() != 0 ){
+        measure_result_publisher_.publish(measure_results);
+      }
+
+      //計測結果をコンソールに出力
+      printf("\033[2J");
+      printf("\033[1;1H");
+      printf("\n%s\n", outputs.c_str());
 
       //計測結果を画像で表示する
       if( show_result_img_flag_ == true ){
@@ -482,6 +502,7 @@ class MeasurementForMultiTracker{
         cv::imshow("result", show_image);
         cv::waitKey(1);
       }//endif
+
     }//end contours_detector
 //-----------------------------------
 
