@@ -171,7 +171,6 @@ class MeasurementForMultiTracker{
                   //面積によるしきい値処理
                   double area = cv::contourArea(contours[i], false);
                   if( area < ribbon_bridge_area_threshold_ ){
-                    //std::cout << "area_size : " << area << std::endl;
                     continue;
                   }
 
@@ -202,22 +201,20 @@ class MeasurementForMultiTracker{
                   //cv::waitKey(1);
 
                   //推定した矩形の描画
-                  cv::Mat rect_img = trim_img.clone();
-                  for (int i = 0; i < 4; i++)
-                  {
-                     cv::line(rect_img,
-                        vertexes[i],
-                        vertexes[i + 1 < 4 ? i + 1 : 0],
-                        cv::Scalar(0,255,0),
-                        3,
-                        cv::LINE_8
-                        );
-                  }
-                  window_name = bridge_ID + "_estimated_rect";
-                  cv::imshow(window_name, rect_img);
-                  cv::waitKey(1);
-
-
+                  //cv::Mat rect_img = trim_img.clone();
+                  //for (int i = 0; i < 4; i++)
+                  //{
+                  //   cv::line(rect_img,
+                  //      vertexes[i],
+                  //      vertexes[i + 1 < 4 ? i + 1 : 0],
+                  //      cv::Scalar(0,255,0),
+                  //      3,
+                  //      cv::LINE_8
+                  //      );
+                  //}
+                  //window_name = bridge_ID + "_estimated_rect";
+                  //cv::imshow(window_name, rect_img);
+                  //cv::waitKey(1);
 
 
                   //minAreaRectで推定された矩形のコーナーに最も近いコーナーを算出
@@ -362,8 +359,7 @@ class MeasurementForMultiTracker{
                   /*
                     浮橋のアスペクト比による閾値処理
                   */
-                  //double result_len_1 = sqrt(pow(result_corners[2].x-result_corners[0].x,2) + pow(result_corners[2].y-result_corners[0].y,2));
-                  //double result_len_2 = sqrt(pow(result_corners[1].x-result_corners[0].x,2) + pow(result_corners[1].y-result_corners[0].y,2));
+                  /*
                   double result_len_1 = sqrt(pow(std::max(abs(result_corners[0].x),abs(result_corners[1].x))-std::min(abs(result_corners[0].x),abs(result_corners[1].x)),2)+pow(std::max(abs(result_corners[0].y),abs(result_corners[1].y))-std::min(abs(result_corners[0].y),abs(result_corners[1].x)),2));
                   double result_len_2 = sqrt(pow(std::max(abs(result_corners[0].x),abs(result_corners[3].x))-std::min(abs(result_corners[0].x),abs(result_corners[3].x)),2)+pow(std::max(abs(result_corners[0].y),abs(result_corners[3].y))-std::min(abs(result_corners[0].y),abs(result_corners[1].x)),2));
 
@@ -381,7 +377,7 @@ class MeasurementForMultiTracker{
                     
                     continue;
                   }
-
+                  */
 
                   //中心位置を推定
                   cv::Point2f center;
@@ -425,7 +421,7 @@ class MeasurementForMultiTracker{
                   //std::cout << "radian:" << result_rad << "\n";
                   //std::cout << "---\n";
                   outputs += " ID:[" + tracking_result.boundingBox.header.frame_id + "] ";
-                  outputs += "\n   - center:[" + std::to_string((int)center.x)  + ", " + std::to_string((int)center.y) + "] ";
+                  outputs += "\n   - center:[" + std::to_string(center.x)  + ", " + std::to_string(center.y) + "] ";
                   outputs += "\n   - degree:[" + std::to_string(degree) + "] ";
                   //outputs += "\n   - diagonal_aspect:[" + std::to_string(diagonal_aspect) + "] ";
                   outputs += "\n   - area:[" + std::to_string(area) + "] ";
