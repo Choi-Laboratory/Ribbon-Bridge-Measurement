@@ -124,7 +124,9 @@ class MeasurementForMultiTracker{
         std::string bridge_ID = tracking_result.boundingBox.header.frame_id;//浮橋のIDを取得
         measure_result.boat_id = tracking_result.boundingBox.label;
 
-        outputs += "\n ID:[" + tracking_result.boundingBox.header.frame_id + "] ";
+        if( tracking_result.boundingBox.header.frame_id != "" ){
+          outputs += "\n ID:[" + tracking_result.boundingBox.header.frame_id + "] ";
+        }
 
         //計測成否のflagを定義
         bool measured_flag = false;
@@ -133,6 +135,7 @@ class MeasurementForMultiTracker{
         std::string window_name; 
 
         if( tracking_result.boundingBox.dimensions.x <= 0 || tracking_result.boundingBox.dimensions.y <= 0){
+          outputs_err_info = "The trimming area is smaller than dimensions.";
           continue;
         }
 
@@ -434,7 +437,7 @@ class MeasurementForMultiTracker{
 
                   outputs += "\n   - center:[" + std::to_string(center.x)  + ", " + std::to_string(center.y) + "] ";
                   outputs += "\n   - degree:[" + std::to_string(degree) + "] ";
-                  outputs += "\n   - diagonal_aspect:[" + std::to_string(diagonal_aspect) + "] ";
+                  //outputs += "\n   - diagonal_aspect:[" + std::to_string(diagonal_aspect) + "] ";
                   //outputs += "\n   - area:[" + std::to_string(area) + "] ";
                   outputs += "\n";
 
@@ -456,12 +459,11 @@ class MeasurementForMultiTracker{
 
               }// end else
 
-            }// end for( int i = 0; i < contours.size(); i++ ){
+              if( measured_flag == false && outputs_err_info == "" ){
+                outputs_err_info = "failed to measure.";
+              }
 
-            //すべての輪郭を試しても計測に失敗してしまった場合
-            if( measured_flag == false ){
-              outputs += "\n\033[33m   " + outputs_err_info + "\n\033[0m \n\n"; 
-            }
+            }// end for( int i = 0; i < contours.size(); i++ ){
 
           }//end try find contours
 
@@ -483,6 +485,14 @@ class MeasurementForMultiTracker{
           //return;
         }// end catch triming
 
+
+        //すべての輪郭を試しても計測に失敗してしまった場合
+        if( measured_flag == false ){
+          outputs += "\n\033[33m   " + outputs_err_info + "\n\033[0m";
+          outputs += "\n"; 
+        }
+
+
       }//end for( int i = 0; i < bridge_num; i++ )
 
       //計測結果をpublish
@@ -499,7 +509,7 @@ class MeasurementForMultiTracker{
       if( show_result_img_flag_ == true ){
         cv::Mat show_image;
         cv::resize(color_img_, show_image, cv::Size(), 0.3, 0.3);
-        cv::imshow("result", show_image);
+        cv::imshow("Measurement Result", show_image);
         cv::waitKey(1);
       }//endif
 
