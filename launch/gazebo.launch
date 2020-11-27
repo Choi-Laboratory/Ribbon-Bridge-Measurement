@@ -3,6 +3,7 @@
 		<param name="sub_img_topic_name" type="str" value="/aerial_camera/camera1/image_raw" />
 		<param name="show_result_image" type="bool" value="True" />
 		<param name="pub_result_image" type="bool" value="True" />
+		<param name="ribbon_bridge_area_threshold" type="double" value="13000" />
 
 		<node pkg="ribbon_bridge_measurement" type="measurement_for_multi_tracker_node" name="measurement_for_multi_tracker_node" output="screen" />
 

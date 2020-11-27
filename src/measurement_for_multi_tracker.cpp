@@ -38,6 +38,7 @@ class MeasurementForMultiTracker{
     std::string sub_img_topic_name_;
     bool show_result_img_flag_;
     bool pub_result_img_flag_;
+    double ribbon_bridge_area_threshold_;
 
     //subscribers
     ros::Subscriber sub_img_;
@@ -74,6 +75,7 @@ class MeasurementForMultiTracker{
       ros::param::get("sub_img_topic_name", sub_img_topic_name_);
       ros::param::get("show_result_image", show_result_img_flag_);
       ros::param::get("pub_result_image", pub_result_img_flag_);
+      ros::param::get("ribbon_bridge_area_threshold", ribbon_bridge_area_threshold_);
       ROS_INFO("sub_img_topic_name:[%s]", sub_img_topic_name_.c_str());
 
       //setup subscribers
@@ -157,19 +159,21 @@ class MeasurementForMultiTracker{
                 //0番目の輪郭は画像全体になるのでパスする
                 continue;
               }
+              
               else{
-                //std::cout << contours[i].size() << "\n"; //輪郭を構成する点の数
+               
                 if( contours[i].size() < 0 ){
                   //矩形を構成するには最低4つの点が必要
                   continue;
                 }
+
                 else{
-                  //ある程度の面積があるものに絞る
+                  //面積によるしきい値処理
                   double area = cv::contourArea(contours[i], false);
-                  //if( area < 4500 ){
-                  //  std::cout << "area_size : " << area << std::endl;
-                  //  continue;
-                  //}
+                  if( area < ribbon_bridge_area_threshold_ ){
+                    //std::cout << "area_size : " << area << std::endl;
+                    continue;
+                  }
 
                   //輪郭を直線近似する
                   std::vector<cv::Point> approx;
@@ -209,9 +213,9 @@ class MeasurementForMultiTracker{
                         cv::LINE_8
                         );
                   }
-                  //window_name = bridge_ID + "_estimated_rect";
-                  //cv::imshow(window_name, rect_img);
-                  //cv::waitKey(1);
+                  window_name = bridge_ID + "_estimated_rect";
+                  cv::imshow(window_name, rect_img);
+                  cv::waitKey(1);
 
 
 
@@ -309,7 +313,7 @@ class MeasurementForMultiTracker{
                   //cv::waitKey(1);
 
 
-
+                  
                   //角度による閾値処理
                   cv::Point2f vector_a, vector_b;
                   double theta, degree;
@@ -320,6 +324,8 @@ class MeasurementForMultiTracker{
                   vector_b.y = result_corners[3].y - result_corners[0].y;
                   theta = std::acos((vector_a.x*vector_a.y+vector_b.x*vector_b.y)/(sqrt(pow(vector_a.x,2)+pow(vector_a.y,2))*sqrt(pow(vector_b.x,2)+pow(vector_b.y,2))));
                   degree = theta * 180.0 / PI;
+                  
+                  /*
                   if( abs(90.0-degree) > angle_threshold ){
                     //ROS_WARN("ID:[%d] The angle exceeds the threshold.", std::stoi(bridge_ID));
                     //std::cout << "theta:" << theta << std::endl;
@@ -337,25 +343,20 @@ class MeasurementForMultiTracker{
                       //ROS_WARN("ID:[%d] The angle exceeds the threshold.", std::stoi(bridge_ID));
                       //ROS_ERROR("ID:[%d] The angle exceeds the threshold.", std::stoi(bridge_ID));
                       //std::cout << "degree:" << degree << std::endl;
-                      outputs += "\033[33m ID:[" + tracking_result.boundingBox.header.frame_id + "] The Angle Exceeds THRESHOLD \n\033[0m"; 
+                      outputs += "\033[33m ID:[" + tracking_result.boundingBox.header.frame_id + "]";
+                      outputs += "\n   The Angle Exceeds THRESHOLD \n\033[0m"; 
                       continue;
                     }
 
-                  }//end if
+                  }//end if */
 
 
-                  /*vector_a.x = result_corners[1].x - result_corners[3].x;
-                  vector_a.y = result_corners[1].y - result_corners[3].y;
-                  vector_b.x = result_corners[2].x - result_corners[3].x;
-                  vector_b.y = result_corners[2].y - result_corners[3].y;
-                  theta = std::acos((vector_a.x*vector_a.y+vector_b.x*vector_b.y)/(sqrt(pow(vector_a.x,2)+pow(vector_a.y,2))*sqrt(pow(vector_b.x,2)+pow(vector_b.y,2))));
-                  degree = theta * 180.0 / PI;
-                  if( 65.0 > abs(degree) || abs(degree) > 115.0 ){
-                    ROS_WARN("ID:[%d] The angle exceeds the threshold.", std::stoi(bridge_ID));
-                    std::cout << "degree:" << degree << std::endl;
-                    continue;
-                  }*/
-
+                  /*
+                    浮橋の対角線の長さの比による閾値処理
+                  */
+                  double diagonal_0_2_length = sqrt( pow(abs(result_corners[0].x-result_corners[2].x), 2) + pow(abs(result_corners[0].y - result_corners[2].y), 2) );
+                  double diagonal_1_3_length = sqrt( pow(abs(result_corners[1].x-result_corners[3].x), 2) + pow(abs(result_corners[1].y - result_corners[3].y), 2) );
+                  double diagonal_aspect = diagonal_0_2_length / diagonal_1_3_length;
 
 
                   /*
@@ -375,7 +376,8 @@ class MeasurementForMultiTracker{
                     //std::cout << "result_aspect_ratio:" << result_aspect_ratio << std::endl;
                     //std::cout << "correct_aspect_ratio:" << boat_aspect_ratio_ << std::endl;
                     //ROS_ERROR("ID:[%d] The aspect_ratio exceeds the threshold.", std::stoi(bridge_ID));
-                    outputs += "\033[33m ID:[" + tracking_result.boundingBox.header.frame_id + "] The Aspect Ration Exceeds THRESHOLD \n\033[0m"; 
+                    outputs += "\033[33m ID:[" + tracking_result.boundingBox.header.frame_id + "]";
+                    outputs += "\n   The Aspect Ratio Exceeds THRESHOLD " + std::to_string(judge) + "\n\033[0m"; 
                     
                     continue;
                   }
@@ -423,8 +425,10 @@ class MeasurementForMultiTracker{
                   //std::cout << "radian:" << result_rad << "\n";
                   //std::cout << "---\n";
                   outputs += " ID:[" + tracking_result.boundingBox.header.frame_id + "] ";
-                  outputs += "center:[" + std::to_string((int)center.x)  + ", " + std::to_string((int)center.y) + "] ";
-                  outputs += "degree:[" + std::to_string(degree) + "] ";
+                  outputs += "\n   - center:[" + std::to_string((int)center.x)  + ", " + std::to_string((int)center.y) + "] ";
+                  outputs += "\n   - degree:[" + std::to_string(degree) + "] ";
+                  //outputs += "\n   - diagonal_aspect:[" + std::to_string(diagonal_aspect) + "] ";
+                  outputs += "\n   - area:[" + std::to_string(area) + "] ";
                   outputs += "\n";
 
                   //計測結果を格納
@@ -445,6 +449,7 @@ class MeasurementForMultiTracker{
               }// end else
             }// end for i
 
+            //計測結果をコンソールに出力
             printf("\033[2J");
             printf("\033[1;1H");
             printf("\n%s\n", outputs.c_str());
@@ -461,9 +466,9 @@ class MeasurementForMultiTracker{
           }//end catch
 
           //trimした浮橋の画像の描画
-          std::string window_name = bridge_ID;
-          cv::imshow(window_name, trim_img);
-          cv::waitKey(1);
+          //std::string window_name = bridge_ID;
+          //cv::imshow(window_name, trim_img);
+          //cv::waitKey(1);
 
         }//end try triming
 
@@ -474,9 +479,10 @@ class MeasurementForMultiTracker{
 
       }//end for
 
+      //計測結果を画像で表示する
       if( show_result_img_flag_ == true ){
         cv::Mat show_image;
-        cv::resize(color_img_, show_image, cv::Size(), 1.0, 1.0);
+        cv::resize(color_img_, show_image, cv::Size(), 0.3, 0.3);
         cv::imshow("result", show_image);
         cv::waitKey(1);
       }//endif
