@@ -1,6 +1,6 @@
 <launch>
 	<group ns="ribbon_bridge_measurement" >
-		<param name="sub_img_topic_name" type="str" value="/camera/rgb/image_raw" />
+		<param name="sub_img_topic_name" type="str" value="/usb_cam/image_raw" />
 		<param name="show_result_image" type="bool" value="True" />
 		<param name="pub_result_image" type="bool" value="True" />
 		<param name="ribbon_bridge_area_threshold" type="double" value="13000" />

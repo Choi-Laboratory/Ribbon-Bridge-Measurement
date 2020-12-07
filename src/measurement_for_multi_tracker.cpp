@@ -183,7 +183,7 @@ class MeasurementForMultiTracker{
                   //面積によるしきい値処理
                   double area = cv::contourArea(contours[i], false);
                   if( area < ribbon_bridge_area_threshold_ ){
-                    outputs_err_info = "The area is not enough threshold.";
+                    outputs_err_info = "The area is not enough threshold. " + std::to_string(area) + " < " + std::to_string(ribbon_bridge_area_threshold_);
                     continue;
                   }
 
@@ -193,7 +193,7 @@ class MeasurementForMultiTracker{
 
                   //矩形以外の形状はcontinue
                   if( approx.size() != 4 ){
-                    outputs_err_info = "You need 4 corners.";
+                    outputs_err_info = "You need 4 corners. Only " + std::to_string(approx.size()) + " corners.";
                     continue;
                   }
 
@@ -459,12 +459,12 @@ class MeasurementForMultiTracker{
 
               }// end else
 
-              if( measured_flag == false && outputs_err_info == "" ){
-                outputs_err_info = "failed to measure.";
-              }
-
             }// end for( int i = 0; i < contours.size(); i++ ){
-
+            
+            if( measured_flag == false && outputs_err_info == "" ){
+                outputs_err_info = "failed to measure.";
+            }
+            
           }//end try find contours
 
           catch(...){
@@ -477,6 +477,31 @@ class MeasurementForMultiTracker{
           //cv::imshow(window_name, trim_img);
           //cv::waitKey(1);
 
+          //すべての輪郭を試しても計測に失敗してしまった場合
+          if( measured_flag == false ){
+            outputs += "\n\033[33m   " + outputs_err_info + "\n\033[0m";
+            outputs += "\n"; 
+          }
+
+          //計測結果をpublish
+          if( measure_results.RibbonBridges.size() != 0 ){
+            measure_result_publisher_.publish(measure_results);
+          }
+
+          //計測結果をコンソールに出力
+          printf("\033[2J");
+          printf("\033[1;1H");
+          printf("\n%s\n", outputs.c_str());
+
+          //計測結果を画像で表示する
+          if( show_result_img_flag_ == true ){
+            cv::Mat show_image;
+            cv::resize(color_img_, show_image, cv::Size(), 0.3, 0.3);
+            cv::imshow("Measurement Result", show_image);
+            cv::waitKey(1);
+          }//endif
+
+
         }//end try triming
 
         catch(...){
@@ -485,33 +510,7 @@ class MeasurementForMultiTracker{
           //return;
         }// end catch triming
 
-
-        //すべての輪郭を試しても計測に失敗してしまった場合
-        if( measured_flag == false ){
-          outputs += "\n\033[33m   " + outputs_err_info + "\n\033[0m";
-          outputs += "\n"; 
-        }
-
-
       }//end for( int i = 0; i < bridge_num; i++ )
-
-      //計測結果をpublish
-      if( measure_results.RibbonBridges.size() != 0 ){
-        measure_result_publisher_.publish(measure_results);
-      }
-
-      //計測結果をコンソールに出力
-      printf("\033[2J");
-      printf("\033[1;1H");
-      printf("\n%s\n", outputs.c_str());
-
-      //計測結果を画像で表示する
-      if( show_result_img_flag_ == true ){
-        cv::Mat show_image;
-        cv::resize(color_img_, show_image, cv::Size(), 0.3, 0.3);
-        cv::imshow("Measurement Result", show_image);
-        cv::waitKey(1);
-      }//endif
 
     }//end contours_detector
 //-----------------------------------
