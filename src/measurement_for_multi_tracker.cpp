@@ -426,7 +426,9 @@ class MeasurementForMultiTracker{
                   }
 
                   //浮橋の角度を計算
-                  double result_deg = result_rad * 180.0 / PI;
+                  double result_deg = result_rad * 180.000000 / PI;
+                  if( std::signbit(result_deg) == true ){ result_deg = - result_deg; } //角度が負の場合は正に直す
+                  if( result_deg > 90 ){ result_deg = 180.0 - result_deg; }//角度を0~90の範囲に収める
 
                   //画像全体における浮橋の中心位置を求める
                   center.x = center.x + tracking_result.boundingBox.pose.position.x;
@@ -436,7 +438,7 @@ class MeasurementForMultiTracker{
                   measured_flag = true;
 
                   outputs += "\n   - center:[" + std::to_string(center.x)  + ", " + std::to_string(center.y) + "] ";
-                  outputs += "\n   - degree:[" + std::to_string(degree) + "] ";
+                  outputs += "\n   - degree:[" + std::to_string(result_deg) + "] ";
                   //outputs += "\n   - diagonal_aspect:[" + std::to_string(diagonal_aspect) + "] ";
                   //outputs += "\n   - area:[" + std::to_string(area) + "] ";
                   outputs += "\n";
@@ -444,7 +446,7 @@ class MeasurementForMultiTracker{
                   //計測結果を格納
                   measure_result.center.x = center.x;
                   measure_result.center.y = center.y;
-                  measure_result.center.theta = degree;
+                  measure_result.center.theta =  result_deg; //degree;
                   for( int i = 0; i < 4; i++ ){
                     geometry_msgs::Pose2D corner_pose;
                     corner_pose.x = result_corners[i].x;
